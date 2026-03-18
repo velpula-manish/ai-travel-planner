@@ -308,24 +308,92 @@ with col1:
     if destination != st.session_state.selected_destination:
         st.session_state.selected_destination = destination
 
-    # ══════════════════════════════════════
-    # WEATHER WIDGET — FIXED
+   # ══════════════════════════════════════
+    # WEATHER WIDGET — OPEN-METEO (Free, No blocks!)
     # ══════════════════════════════════════
     if destination and len(destination.strip()) > 2:
         weather_box = st.empty()
         try:
-            headers = {"User-Agent": "curl/7.68.0"}
-            r1 = requests.get(
-                f"https://wttr.in/{destination}?format=3",
-                timeout=8, headers=headers
+            # Step 1: Get coordinates of city using geocoding API
+            geo_url = (
+                f"https://geocoding-api.open-meteo.com/v1/search"
+                f"?name={urllib.parse.quote(destination)}&count=1&language=en&format=json"
             )
-            r2 = requests.get(
-                f"https://wttr.in/{destination}?format=%C+%t",
-                timeout=8, headers=headers
-            )
-            r3 = requests.get(
-                f"https://wttr.in/{destination}?format=Humidity:+%h",
-                timeout=8, headers=headers
+            geo_resp = requests.get(geo_url, timeout=8)
+            geo_data = geo_resp.json()
+
+            if geo_data.get("results"):
+                lat  = geo_data["results"][0]["latitude"]
+                lon  = geo_data["results"][0]["longitude"]
+                city = geo_data["results"][0].get("name", destination)
+                country = geo_data["results"][0].get("country", "")
+
+                # Step 2: Get weather from Open-Meteo (100% free, no API key!)
+                weather_url = (
+                    f"https://api.open-meteo.com/v1/forecast"
+                    f"?latitude={lat}&longitude={lon}"
+                    f"&current_weather=true"
+                    f"&hourly=relativehumidity_2m,precipitation_probability"
+                    f"&timezone=auto&forecast_days=1"
+                )
+                w_resp = requests.get(weather_url, timeout=8)
+                w_data = w_resp.json()
+
+                if "current_weather" in w_data:
+                    cw       = w_data["current_weather"]
+                    temp     = cw.get("temperature", "—")
+                    wind     = cw.get("windspeed", "—")
+                    wcode    = cw.get("weathercode", 0)
+                    humidity = w_data.get("hourly", {}).get(
+                        "relativehumidity_2m", [None]
+                    )[0]
+                    precip   = w_data.get("hourly", {}).get(
+                        "precipitation_probability", [None]
+                    )[0]
+
+                    # Weather code to description
+                    weather_codes = {
+                        0:"☀️ Clear Sky", 1:"🌤️ Mainly Clear",
+                        2:"⛅ Partly Cloudy", 3:"☁️ Overcast",
+                        45:"🌫️ Foggy", 48:"🌫️ Icy Fog",
+                        51:"🌦️ Light Drizzle", 61:"🌧️ Light Rain",
+                        63:"🌧️ Moderate Rain", 65:"🌧️ Heavy Rain",
+                        71:"🌨️ Light Snow", 73:"❄️ Moderate Snow",
+                        75:"❄️ Heavy Snow", 80:"🌦️ Rain Showers",
+                        95:"⛈️ Thunderstorm", 96:"⛈️ Heavy Thunderstorm",
+                    }
+                    condition = weather_codes.get(wcode, "🌡️ Unknown")
+
+                    weather_box.markdown(
+                        f'<div class="weather-box">'
+                        f'<strong>🌤️ LIVE WEATHER — {city.upper()}, {country.upper()}</strong><br>'
+                        f'🌡️ TEMPERATURE: <strong>{temp}°C</strong> &nbsp;|&nbsp; {condition}<br>'
+                        f'💨 WIND SPEED: {wind} km/h &nbsp;|&nbsp; '
+                        f'💧 HUMIDITY: {humidity}% &nbsp;|&nbsp; '
+                        f'🌧️ RAIN CHANCE: {precip}%'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+                else:
+                    weather_box.markdown(
+                        f'<div class="weather-box">'
+                        f'🌤️ WEATHER DATA UNAVAILABLE FOR {destination.upper()}'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+            else:
+                weather_box.markdown(
+                    f'<div class="weather-box">'
+                    f'🌤️ CITY NOT FOUND — TRY FULL CITY NAME (e.g. "New York" not "NY")'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+        except Exception:
+            weather_box.markdown(
+                '<div class="weather-box">'
+                '🌤️ WEATHER TEMPORARILY UNAVAILABLE'
+                '</div>',
+                unsafe_allow_html=True
             )
             if r1.status_code == 200 and len(r1.text.strip()) > 3:
                 weather_box.markdown(
@@ -403,10 +471,39 @@ with col1:
     budget = f"{currency} {budget_amount}" if budget_amount else f"{currency} (not specified)"
 
 with col2:
-    travel_dates = st.text_input(
-        "🗓️ TRAVEL DATES",
-        placeholder="e.g. June 10–17, 2025"
-    )
+    # ── DATE PICKER ──
+    st.markdown("🗓️ **TRAVEL DATES**")
+    import datetime
+    date_col1, date_col2 = st.columns(2)
+    with date_col1:
+        start_date = st.date_input(
+            "FROM DATE",
+            value=datetime.date.today() + datetime.timedelta(days=7),
+            min_value=datetime.date.today(),
+            format="DD/MM/YYYY"
+        )
+    with date_col2:
+        end_date = st.date_input(
+            "TO DATE",
+            value=datetime.date.today() + datetime.timedelta(days=7 + duration),
+            min_value=start_date,
+            format="DD/MM/YYYY"
+        )
+
+    # Calculate trip days
+    trip_days    = (end_date - start_date).days
+    travel_dates = f"{start_date.strftime('%d %b %Y')} to {end_date.strftime('%d %b %Y')}"
+
+    if trip_days > 0:
+        st.markdown(
+            f"<p style='color:#38bdf8;font-weight:700;font-size:0.85rem;'>"
+            f"✅ TRIP LENGTH: {trip_days} DAY(S) — "
+            f"{start_date.strftime('%d %b')} TO {end_date.strftime('%d %b %Y')}"
+            f"</p>",
+            unsafe_allow_html=True
+        )
+    elif trip_days == 0:
+        st.warning("⚠️ END DATE MUST BE AFTER START DATE!")
     travelers = st.number_input("👥 NUMBER OF TRAVELERS", 1, 20, 2)
 
     language = st.selectbox(

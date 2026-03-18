@@ -10,7 +10,7 @@ TAVILY_API_KEY = st.secrets["TAVILY_API_KEY"]
 
 st.set_page_config(
     page_title="AI Travel Planner ✈️",
-    page_icon="🌍",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -18,32 +18,33 @@ st.set_page_config(
 st.markdown("""
 <style>
 /* ══════════════════════════════════
-   BACKGROUND
+   BACKGROUND — Sky Blue
 ══════════════════════════════════ */
 [data-testid="stAppViewContainer"] {
-    background: linear-gradient(160deg, #052e16, #14532d, #166534) !important;
+    background: linear-gradient(160deg, #0c1445, #1a237e, #283593) !important;
     min-height: 100vh;
 }
 
 /* ══════════════════════════════════
-   SIDEBAR — ALWAYS VISIBLE
+   SIDEBAR
 ══════════════════════════════════ */
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #052e16 0%, #14532d 100%) !important;
-    border-right: 2px solid #16a34a !important;
+    background: linear-gradient(180deg, #0d1b2a 0%, #1b2a4a 100%) !important;
+    border-right: 2px solid #38bdf8 !important;
 }
-[data-testid="stSidebar"] * {
-    color: #bbf7d0 !important;
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] li,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] div,
+[data-testid="stSidebar"] label {
+    color: #bae6fd !important;
+}
+[data-testid="stSidebar"] strong {
+    color: #38bdf8 !important;
 }
 [data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3,
-[data-testid="stSidebar"] strong {
-    color: #4ade80 !important;
-}
-[data-testid="stSidebar"] .stInfo {
-    background: rgba(22,163,74,0.2) !important;
-    border: 1px solid #16a34a !important;
-    color: #bbf7d0 !important;
+[data-testid="stSidebar"] h3 {
+    color: #7dd3fc !important;
 }
 
 /* ══════════════════════════════════
@@ -57,37 +58,28 @@ st.markdown("""
     transform: translate(-50%, -50%) rotate(-30deg);
     font-size: 4.5rem;
     font-weight: 900;
-    color: rgba(74, 222, 128, 0.07);
+    color: rgba(56, 189, 248, 0.08);
     white-space: nowrap;
     pointer-events: none;
     z-index: 0;
     letter-spacing: 5px;
     text-transform: uppercase;
 }
-[data-testid="stAppViewContainer"]::after {
-    content: "✈ MANISH ✈ TRAVEL ✈ PLANNER ✈ MANISH ✈ TRAVEL ✈ PLANNER";
-    position: fixed;
-    bottom: 10%;
-    left: 55%;
-    transform: translate(-50%, 0) rotate(-30deg);
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: rgba(74, 222, 128, 0.05);
-    white-space: nowrap;
-    pointer-events: none;
-    z-index: 0;
-    letter-spacing: 3px;
-}
 
 /* ══════════════════════════════════
-   ALL TEXT COLOR
+   ALL MAIN TEXT
 ══════════════════════════════════ */
 [data-testid="stAppViewContainer"] p,
 [data-testid="stAppViewContainer"] li,
-[data-testid="stAppViewContainer"] label,
 [data-testid="stAppViewContainer"] span,
-[data-testid="stAppViewContainer"] div {
-    color: #dcfce7 !important;
+[data-testid="stAppViewContainer"] div,
+[data-testid="stAppViewContainer"] label {
+    color: #e0f2fe !important;
+}
+[data-testid="stAppViewContainer"] h1,
+[data-testid="stAppViewContainer"] h2,
+[data-testid="stAppViewContainer"] h3 {
+    color: #7dd3fc !important;
 }
 
 /* ══════════════════════════════════
@@ -100,7 +92,7 @@ st.markdown("""
     letter-spacing: 4px;
     text-transform: uppercase;
     padding: 15px 0 5px 0;
-    background: linear-gradient(135deg, #4ade80, #86efac, #34d399);
+    background: linear-gradient(135deg, #38bdf8, #7dd3fc, #bae6fd);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -110,15 +102,15 @@ st.markdown("""
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 3px;
-    color: #86efac !important;
-    opacity: 0.8;
+    color: #7dd3fc;
+    opacity: 0.85;
     margin-bottom: 3px;
 }
 .brand-tag {
     text-align: center;
     font-size: 0.8rem;
     letter-spacing: 3px;
-    color: #4ade80 !important;
+    color: #38bdf8;
     font-weight: 700;
     text-transform: uppercase;
     margin-bottom: 10px;
@@ -132,9 +124,9 @@ st.markdown("""
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 2px;
-    color: #4ade80 !important;
+    color: #38bdf8 !important;
     margin-bottom: 10px;
-    border-left: 4px solid #16a34a;
+    border-left: 4px solid #0284c7;
     padding-left: 10px;
 }
 
@@ -143,50 +135,52 @@ st.markdown("""
 ══════════════════════════════════ */
 .weather-box {
     background: linear-gradient(135deg,
-        rgba(5,46,22,0.9), rgba(20,83,45,0.9));
-    border: 1.5px solid #16a34a;
+        rgba(2, 132, 199, 0.3),
+        rgba(3, 105, 161, 0.4));
+    border: 1.5px solid #38bdf8;
     border-radius: 12px;
     padding: 12px 16px;
     margin: 8px 0 12px 0;
     font-size: 0.92rem;
     font-weight: 600;
-    color: #bbf7d0 !important;
+    color: #e0f2fe !important;
     line-height: 1.9;
-    box-shadow: 0 4px 15px rgba(22,163,74,0.2);
+    box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2);
 }
 
 /* ══════════════════════════════════
    POPULAR DESTINATION BUTTONS
-   — ALL EQUAL SIZE, FIXED HEIGHT —
+   EQUAL SIZE + VISIBLE TEXT
 ══════════════════════════════════ */
 div[data-testid="column"] .stButton > button {
-    background: linear-gradient(135deg, #14532d, #166534) !important;
-    color: #86efac !important;
-    font-size: 0.82rem !important;
+    background: linear-gradient(135deg, #0369a1, #0284c7) !important;
+    color: #e0f2fe !important;
+    font-size: 0.78rem !important;
     font-weight: 800 !important;
-    height: 60px !important;
-    min-height: 60px !important;
-    max-height: 60px !important;
-    padding: 0 8px !important;
+    height: 55px !important;
+    min-height: 55px !important;
+    max-height: 55px !important;
+    padding: 4px 6px !important;
     border-radius: 10px !important;
-    border: 1.5px solid #16a34a !important;
+    border: 1.5px solid #38bdf8 !important;
     text-transform: uppercase !important;
-    letter-spacing: 0.8px !important;
-    white-space: nowrap !important;
+    letter-spacing: 0.5px !important;
+    white-space: normal !important;
     overflow: hidden !important;
-    text-overflow: ellipsis !important;
     transition: all 0.2s !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     width: 100% !important;
+    line-height: 1.3 !important;
+    text-align: center !important;
 }
 div[data-testid="column"] .stButton > button:hover {
-    background: linear-gradient(135deg, #15803d, #16a34a) !important;
+    background: linear-gradient(135deg, #0284c7, #38bdf8) !important;
     color: white !important;
-    border-color: #4ade80 !important;
+    border-color: #7dd3fc !important;
     transform: translateY(-2px) !important;
-    box-shadow: 0 6px 20px rgba(22,163,74,0.4) !important;
+    box-shadow: 0 6px 20px rgba(56,189,248,0.4) !important;
 }
 
 /* ══════════════════════════════════
@@ -194,7 +188,7 @@ div[data-testid="column"] .stButton > button:hover {
 ══════════════════════════════════ */
 .stButton > button {
     width: 100%;
-    background: linear-gradient(135deg, #15803d, #16a34a, #22c55e) !important;
+    background: linear-gradient(135deg, #0369a1, #0284c7, #38bdf8) !important;
     color: white !important;
     font-size: 1.2rem !important;
     font-weight: 900 !important;
@@ -203,19 +197,113 @@ div[data-testid="column"] .stButton > button:hover {
     border: none !important;
     text-transform: uppercase !important;
     letter-spacing: 2px !important;
-    box-shadow: 0 8px 32px rgba(22,163,74,0.5) !important;
+    box-shadow: 0 8px 32px rgba(56,189,248,0.4) !important;
     transition: all 0.3s !important;
 }
 .stButton > button:hover {
     transform: translateY(-3px) !important;
-    box-shadow: 0 14px 40px rgba(22,163,74,0.7) !important;
+    box-shadow: 0 14px 40px rgba(56,189,248,0.6) !important;
+}
+
+/* ══════════════════════════════════
+   SLIDER — SKY BLUE & VISIBLE
+══════════════════════════════════ */
+.stSlider > div > div > div > div {
+    background: #38bdf8 !important;
+}
+.stSlider > div > div > div {
+    background: rgba(56, 189, 248, 0.3) !important;
+}
+[data-testid="stSlider"] div[role="slider"] {
+    background: #38bdf8 !important;
+    border: 3px solid white !important;
+    box-shadow: 0 0 8px rgba(56,189,248,0.8) !important;
+}
+.stSlider p, .stSlider span, .stSlider div {
+    color: #e0f2fe !important;
+}
+
+/* ══════════════════════════════════
+   INPUT FIELDS — VISIBLE TEXT
+══════════════════════════════════ */
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea,
+.stNumberInput > div > div > input {
+    background: rgba(3, 105, 161, 0.3) !important;
+    border: 1.5px solid #38bdf8 !important;
+    border-radius: 8px !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+.stTextInput > div > div > input::placeholder,
+.stTextArea > div > div > textarea::placeholder {
+    color: #7dd3fc !important;
+    opacity: 0.7 !important;
+}
+.stTextInput > div > div > input:focus,
+.stTextArea > div > div > textarea:focus {
+    border-color: #7dd3fc !important;
+    box-shadow: 0 0 0 2px rgba(125,211,252,0.3) !important;
+}
+
+/* ══════════════════════════════════
+   SELECTBOX — VISIBLE OPTIONS
+══════════════════════════════════ */
+.stSelectbox > div > div {
+    background: rgba(3, 105, 161, 0.4) !important;
+    border: 1.5px solid #38bdf8 !important;
+    color: #ffffff !important;
+    border-radius: 8px !important;
+}
+.stSelectbox > div > div > div {
+    color: #ffffff !important;
+}
+/* Dropdown options list */
+[data-baseweb="select"] ul {
+    background: #0c1445 !important;
+    border: 1px solid #38bdf8 !important;
+}
+[data-baseweb="select"] li {
+    color: #e0f2fe !important;
+    background: #0c1445 !important;
+}
+[data-baseweb="select"] li:hover {
+    background: #0369a1 !important;
+    color: white !important;
+}
+
+/* ══════════════════════════════════
+   MULTISELECT — VISIBLE OPTIONS
+══════════════════════════════════ */
+[data-baseweb="tag"] {
+    background: #0284c7 !important;
+    color: white !important;
+}
+[data-baseweb="tag"] span {
+    color: white !important;
+}
+.stMultiSelect > div > div {
+    background: rgba(3, 105, 161, 0.4) !important;
+    border: 1.5px solid #38bdf8 !important;
+}
+.stMultiSelect > div > div > div {
+    color: #e0f2fe !important;
+}
+
+/* ══════════════════════════════════
+   NUMBER INPUT BUTTONS
+══════════════════════════════════ */
+.stNumberInput button {
+    background: #0284c7 !important;
+    color: white !important;
+    border: 1px solid #38bdf8 !important;
 }
 
 /* ══════════════════════════════════
    SUCCESS HEADER
 ══════════════════════════════════ */
 .success-header {
-    background: linear-gradient(135deg, #059669, #10b981, #34d399);
+    background: linear-gradient(135deg, #0369a1, #0284c7, #38bdf8);
     color: white !important;
     padding: 18px 25px;
     border-radius: 14px;
@@ -225,18 +313,19 @@ div[data-testid="column"] .stButton > button:hover {
     text-align: center;
     text-transform: uppercase;
     letter-spacing: 3px;
-    box-shadow: 0 8px 32px rgba(16,185,129,0.4);
+    box-shadow: 0 8px 32px rgba(56,189,248,0.4);
 }
 
 /* ══════════════════════════════════
    RESULT BOX
 ══════════════════════════════════ */
 .result-container {
-    border: 1.5px solid #16a34a;
+    border: 1.5px solid #38bdf8;
     border-radius: 16px;
     padding: 25px 30px;
     margin-bottom: 20px;
-    background: rgba(5, 46, 22, 0.5);
+    background: rgba(3, 105, 161, 0.15);
+    color: #e0f2fe !important;
 }
 
 /* ══════════════════════════════════
@@ -257,39 +346,10 @@ div[data-testid="column"] .stButton > button:hover {
 }
 
 /* ══════════════════════════════════
-   INPUT FIELDS
-══════════════════════════════════ */
-.stTextInput input,
-.stTextArea textarea,
-.stNumberInput input {
-    background: rgba(5, 46, 22, 0.7) !important;
-    border: 1.5px solid #16a34a !important;
-    border-radius: 8px !important;
-    color: #dcfce7 !important;
-}
-.stTextInput input:focus,
-.stTextArea textarea:focus {
-    border-color: #4ade80 !important;
-    box-shadow: 0 0 0 2px rgba(74,222,128,0.2) !important;
-}
-.stSelectbox > div > div {
-    background: rgba(5, 46, 22, 0.7) !important;
-    border: 1.5px solid #16a34a !important;
-    color: #dcfce7 !important;
-}
-
-/* ══════════════════════════════════
-   SLIDER
-══════════════════════════════════ */
-.stSlider [data-baseweb="slider"] div {
-    background: #16a34a !important;
-}
-
-/* ══════════════════════════════════
    DIVIDER
 ══════════════════════════════════ */
 hr {
-    border-color: rgba(22,163,74,0.3) !important;
+    border-color: rgba(56,189,248,0.3) !important;
 }
 
 /* ══════════════════════════════════
@@ -302,14 +362,14 @@ hr {
     opacity: 0.5;
     font-size: 0.75rem;
     margin-top: 5px;
-    color: #4ade80 !important;
+    color: #38bdf8 !important;
 }
 .footer-brand {
     text-align: center;
     text-transform: uppercase;
     letter-spacing: 3px;
     font-size: 0.7rem;
-    color: #4ade80 !important;
+    color: #38bdf8 !important;
     opacity: 0.6;
     margin-top: 3px;
 }
@@ -320,8 +380,8 @@ hr {
 # ── SIDEBAR ──
 with st.sidebar:
     st.markdown(
-        "<h2 style='color:#4ade80 !important;text-transform:uppercase;"
-        "letter-spacing:2px;font-size:1rem;'>🌍 MANISH TRAVEL PLANNER</h2>",
+        "<h2 style='color:#38bdf8;text-transform:uppercase;"
+        "letter-spacing:2px;font-size:1rem;'> MANISH TRAVEL PLANNER</h2>",
         unsafe_allow_html=True
     )
     st.markdown("---")
@@ -357,7 +417,7 @@ with st.sidebar:
     """)
     st.markdown("---")
     st.markdown(
-        "<div style='text-align:center;color:#4ade80 !important;"
+        "<div style='text-align:center;color:#38bdf8;"
         "font-size:0.75rem;text-transform:uppercase;letter-spacing:2px;'>"
         "© MANISH TRAVEL PLANNER<br>ALL RIGHTS RESERVED</div>",
         unsafe_allow_html=True
@@ -373,7 +433,7 @@ st.markdown('<div class="brand-tag">— BY MANISH TRAVEL PLANNER —</div>',
 st.markdown("---")
 
 # ══════════════════════════════════════
-# POPULAR DESTINATIONS — EQUAL SIZE
+# POPULAR DESTINATIONS
 # ══════════════════════════════════════
 st.markdown('<div class="section-title">🔥 POPULAR DESTINATIONS — CLICK TO AUTO-FILL</div>',
             unsafe_allow_html=True)
@@ -381,7 +441,6 @@ st.markdown('<div class="section-title">🔥 POPULAR DESTINATIONS — CLICK TO A
 if "selected_destination" not in st.session_state:
     st.session_state.selected_destination = ""
 
-# Fixed list — 12 destinations in 6 columns x 2 rows
 popular_destinations = [
     ("🗼", "PARIS"),      ("🗽", "NEW YORK"),
     ("🏯", "TOKYO"),      ("🕌", "DUBAI"),
@@ -391,12 +450,11 @@ popular_destinations = [
     ("🏰", "LONDON"),     ("🗺️", "SINGAPORE"),
 ]
 
-# 6 columns — each button same width and height
 dest_cols = st.columns(6)
 for i, (emoji, city) in enumerate(popular_destinations):
     with dest_cols[i % 6]:
         if st.button(
-            f"{emoji}\n{city}",
+            f"{emoji} {city}",
             key=f"dest_{i}",
             use_container_width=True
         ):
@@ -405,7 +463,7 @@ for i, (emoji, city) in enumerate(popular_destinations):
 
 st.markdown("---")
 
-# ── INPUT FORM ──
+# ── INPUTS ──
 st.markdown('<div class="section-title">📝 TELL US ABOUT YOUR DREAM TRIP</div>',
             unsafe_allow_html=True)
 
@@ -420,43 +478,59 @@ with col1:
     if destination != st.session_state.selected_destination:
         st.session_state.selected_destination = destination
 
-    # ══════════════════════════════════════
-    # WEATHER — Always shows when destination typed
-    # ══════════════════════════════════════
+    # ── WEATHER WIDGET ──
     if destination and len(destination.strip()) > 2:
-        with st.spinner("🌤️ FETCHING LIVE WEATHER..."):
-            try:
-                r1 = requests.get(
-                    f"https://wttr.in/{destination}?format=3",
-                    timeout=6
-                )
-                r2 = requests.get(
-                    f"https://wttr.in/{destination}?format=%C+%t",
-                    timeout=6
-                )
-                r3 = requests.get(
-                    f"https://wttr.in/{destination}?format=💧+Humidity:+%h",
-                    timeout=6
-                )
-                if r1.status_code == 200 and "Unknown" not in r1.text:
-                    st.markdown(
-                        f'<div class="weather-box">'
-                        f'🌤️ <strong>LIVE WEATHER — {destination.upper()}</strong><br>'
-                        f'📍 {r1.text.strip()}<br>'
-                        f'🌡️ CONDITIONS: {r2.text.strip() if r2.status_code==200 else "—"}<br>'
-                        f'{r3.text.strip() if r3.status_code==200 else ""}'
-                        f'</div>',
-                        unsafe_allow_html=True
-                    )
-            except Exception:
+        try:
+            r1 = requests.get(
+                f"https://wttr.in/{destination}?format=3",
+                timeout=6
+            )
+            r2 = requests.get(
+                f"https://wttr.in/{destination}?format=%C+%t",
+                timeout=6
+            )
+            r3 = requests.get(
+                f"https://wttr.in/{destination}?format=💧+Humidity:+%h",
+                timeout=6
+            )
+            if r1.status_code == 200 and "Unknown" not in r1.text:
                 st.markdown(
-                    '<div class="weather-box">'
-                    '🌤️ WEATHER DATA TEMPORARILY UNAVAILABLE'
-                    '</div>',
+                    f'<div class="weather-box">'
+                    f'🌤️ <strong>LIVE WEATHER — {destination.upper()}</strong><br>'
+                    f'📍 {r1.text.strip()}<br>'
+                    f'🌡️ CONDITIONS: {r2.text.strip() if r2.status_code==200 else "—"}<br>'
+                    f'{r3.text.strip() if r3.status_code==200 else ""}'
+                    f'</div>',
                     unsafe_allow_html=True
                 )
+            else:
+                st.markdown(
+                    f'<div class="weather-box">'
+                    f'🌤️ WEATHER FOR {destination.upper()} — TYPE FULL CITY NAME FOR WEATHER'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+        except Exception:
+            st.markdown(
+                '<div class="weather-box">'
+                '🌤️ WEATHER TEMPORARILY UNAVAILABLE — PLEASE TRY AGAIN'
+                '</div>',
+                unsafe_allow_html=True
+            )
 
-    duration = st.slider("📅 TRIP DURATION (DAYS)", 1, 14, 3)
+    # ── SLIDER — now visible ──
+    duration = st.slider(
+        "📅 TRIP DURATION (DAYS)",
+        min_value=1,
+        max_value=14,
+        value=3,
+        step=1
+    )
+    st.markdown(
+        f"<p style='color:#38bdf8;font-weight:700;font-size:0.9rem;"
+        f"text-transform:uppercase;'>✅ SELECTED: {duration} DAY(S)</p>",
+        unsafe_allow_html=True
+    )
 
     st.markdown("##### 💰 BUDGET")
     b1, b2 = st.columns([1, 2])
@@ -491,7 +565,11 @@ with col1:
                 if amt < limit:
                     tier = f"{label} TRIP"
                     break
-            st.caption(f"**{tier}**")
+            st.markdown(
+                f"<p style='color:#38bdf8;font-weight:700;"
+                f"font-size:0.9rem;'>{tier}</p>",
+                unsafe_allow_html=True
+            )
         except Exception:
             pass
 
@@ -537,7 +615,7 @@ def generate_itinerary(destination, duration, budget, travel_dates,
     special_text   = special_requirements or "None"
     curr_symbol    = budget.split()[0]
 
-    prompt = f"""You are an expert AI Travel Planner with 20 years experience.
+    prompt = f"""You are an expert AI Travel Planner.
 
 Real-time info about {destination}: {web_info}
 
@@ -549,26 +627,21 @@ Create detailed {duration}-day itinerary:
 - Interests: {interests_text}
 - Notes: {special_text}
 
-Show ALL prices in {curr_symbol} AND USD.
+Show prices in {curr_symbol} AND USD.
 
 ## 🌍 DESTINATION OVERVIEW
-## 📅 DAY-BY-DAY ITINERARY
-### DAY 1 — [THEME]
-- **MORNING:** ...
-- **AFTERNOON:** ...
-- **EVENING:** ...
-[All {duration} days]
+## 📅 DAY-BY-DAY ITINERARY (all {duration} days with MORNING/AFTERNOON/EVENING)
 ## 🏨 HOTEL RECOMMENDATIONS (3 options with prices)
 ## 🍽️ MUST-TRY RESTAURANTS (5 with prices in {curr_symbol})
 ## 💰 BUDGET BREAKDOWN (with TOTAL for {travelers} travelers)
 ## 💡 TOP TRAVEL TIPS (5 tips)
-## 🚗 GETTING AROUND (transport costs in {curr_symbol})
+## 🚗 GETTING AROUND (transport with costs)
 """
 
     resp = groq_client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[
-            {"role": "system", "content": "Expert travel planner. Detailed itineraries with accurate local prices."},
+            {"role": "system", "content": "Expert travel planner. Detailed itineraries with accurate prices."},
             {"role": "user",   "content": prompt}
         ],
         max_tokens=3000,
@@ -591,7 +664,7 @@ if generate_btn:
     elif not budget_amount:
         st.error("⚠️ PLEASE ENTER YOUR BUDGET AMOUNT!")
     else:
-        with st.spinner("🔍 AI IS SEARCHING THE WEB & CRAFTING YOUR PERFECT TRIP... ⏳"):
+        with st.spinner("🔍 AI IS SEARCHING & CRAFTING YOUR PERFECT TRIP... ⏳"):
             try:
                 result = generate_itinerary(
                     destination, duration, budget,

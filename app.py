@@ -354,23 +354,3 @@ st.markdown(
     '<div class="footer">BUILT WITH ❤️ USING GROQ AI + TAVILY + STREAMLIT</div>',
     unsafe_allow_html=True
 )
-```
-
----
-
-## What Changed 🧠
-
-| Before | After |
-|---|---|
-| Fixed dropdown ($500-$1000 etc.) | ✅ Type ANY amount you want |
-| Only USD | ✅ INR, USD, EUR, GBP options |
-| No feedback | ✅ Shows Budget/Moderate/Luxury tier |
-| Fixed prices in output | ✅ AI shows prices in YOUR currency |
-
----
-
-## It Will Look Like This
-```
-💰 BUDGET
-[₹ INR ▼]  [50000        ]
-            🟡 Moderate Trip

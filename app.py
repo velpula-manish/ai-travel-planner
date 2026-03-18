@@ -1,19 +1,15 @@
+%%writefile app.py
 
 import streamlit as st
 import os
-from langchain.agents import AgentExecutor, create_react_agent
-from langchain.prompts import PromptTemplate
-from langchain_groq import ChatGroq
-from langchain_community.tools.tavily_search import TavilySearchResults
+from groq import Groq
+from tavily import TavilyClient
 
-# ✅ SAFE: Reads from Streamlit Secrets (NOT hardcoded!)
-# No API keys written here — they live in Streamlit Cloud secrets
+# ── API KEYS FROM STREAMLIT SECRETS ──
 GROQ_API_KEY   = st.secrets["GROQ_API_KEY"]
 TAVILY_API_KEY = st.secrets["TAVILY_API_KEY"]
 
-os.environ["GROQ_API_KEY"]   = GROQ_API_KEY
-os.environ["TAVILY_API_KEY"] = TAVILY_API_KEY
-
+# ── PAGE CONFIG ──
 st.set_page_config(
     page_title="AI Travel Planner ✈️",
     page_icon="🌍",
@@ -21,6 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# ── STYLING ──
 st.markdown("""
 <style>
     .main-title {
@@ -85,6 +82,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ── SIDEBAR ──
 with st.sidebar:
     st.markdown("## 🌍 AI TRAVEL PLANNER")
     st.markdown("---")
@@ -92,7 +90,6 @@ with st.sidebar:
     st.markdown("""
     - 🧠 **GROQ** — LLaMA 3.1 AI Brain
     - 🔍 **TAVILY** — Real-Time Web Search
-    - 🤖 **LANGCHAIN** — Agent Framework
     - 🎨 **STREAMLIT** — Beautiful UI
     """)
     st.markdown("---")
@@ -116,12 +113,14 @@ with st.sidebar:
     st.markdown("---")
     st.info("🤖 AI searches the web in real-time for the latest travel info!")
 
+# ── HEADER ──
 st.markdown('<div class="main-title">🌍 AI TRAVEL ITINERARY PLANNER</div>',
             unsafe_allow_html=True)
 st.markdown('<div class="subtitle">✨ YOUR PERSONAL AI TRAVEL AGENT — POWERED BY GROQ + TAVILY</div>',
             unsafe_allow_html=True)
 st.markdown("---")
 
+# ── INPUT FORM ──
 st.markdown('<div class="section-title">📝 TELL US ABOUT YOUR DREAM TRIP</div>',
             unsafe_allow_html=True)
 
@@ -152,48 +151,124 @@ special_requirements = st.text_area(
 )
 st.markdown("---")
 
-@st.cache_resource
-def initialize_agent():
-    llm = ChatGroq(
-        model="llama-3.1-8b-instant",
-        temperature=0.5,
-        api_key=GROQ_API_KEY,
-        max_tokens=3000
-    )
-    search_tool = TavilySearchResults(
-        max_results=2, search_depth="basic",
-        api_key=TAVILY_API_KEY
-    )
-    tools = [search_tool]
-    travel_prompt = PromptTemplate.from_template("""You are an expert AI Travel Planner.
-Search ONCE then write a COMPLETE itinerary immediately.
-RULES: Maximum 2 searches. After searching write Final Answer immediately.
-Tools: {tools}
-Format:
-Question: travel request
-Thought: I will search for key info
-Action: {tool_names}
-Action Input: best attractions hotels restaurants [destination]
-Observation: results
-Thought: I have enough info. Writing itinerary now.
-Final Answer:
-## 🌍 DESTINATION OVERVIEW
-## 📅 DAY-BY-DAY ITINERARY
-## 🏨 HOTEL RECOMMENDATIONS
-## 🍽️ MUST-TRY RESTAURANTS
-## 💰 BUDGET BREAKDOWN
-## 💡 TOP TRAVEL TIPS
-## 🚗 GETTING AROUND
-Question: {input}
-Thought: {agent_scratchpad}""")
-    agent = create_react_agent(llm=llm, tools=tools, prompt=travel_prompt)
-    return AgentExecutor(
-        agent=agent, tools=tools, verbose=False,
-        max_iterations=5, max_execution_time=120,
-        handle_parsing_errors=True
+
+# ── CORE FUNCTION: Search + Generate ──
+def generate_itinerary(destination, duration, budget, travel_dates,
+                        travelers, interests, special_requirements):
+    """
+    Step 1: Search web with Tavily
+    Step 2: Send results to Groq to write itinerary
+    No LangChain needed — direct API calls!
+    """
+
+    # ── STEP 1: Search with Tavily ──
+    tavily = TavilyClient(api_key=TAVILY_API_KEY)
+
+    search_query = (
+        f"best things to do hotels restaurants in {destination} "
+        f"travel tips budget {budget}"
     )
 
-generate_btn = st.button("🚀 GENERATE MY TRAVEL ITINERARY!", use_container_width=True)
+    try:
+        search_results = tavily.search(
+            query=search_query,
+            max_results=3,
+            search_depth="basic"
+        )
+        # Extract text from results
+        web_info = ""
+        for r in search_results.get("results", []):
+            web_info += f"\n- {r.get('title','')}: {r.get('content','')[:300]}"
+    except Exception:
+        web_info = f"Popular destination with great attractions, hotels and restaurants."
+
+    # ── STEP 2: Generate with Groq ──
+    groq_client = Groq(api_key=GROQ_API_KEY)
+
+    interests_text = ", ".join(interests) if interests else "General Sightseeing"
+    special_text   = special_requirements if special_requirements else "None"
+
+    prompt = f"""You are an expert AI Travel Planner with 20 years of experience.
+
+Here is real-time web information about {destination}:
+{web_info}
+
+Using this information, create a detailed {duration}-day travel itinerary for:
+- Destination: {destination}
+- Travel Dates: {travel_dates}
+- Budget: {budget}
+- Number of Travelers: {travelers}
+- Interests: {interests_text}
+- Special Requirements: {special_text}
+
+Write a complete, detailed itinerary with EXACTLY these sections
+using UPPERCASE headings:
+
+## 🌍 DESTINATION OVERVIEW
+[Write 3-4 sentences about the destination]
+
+## 📅 DAY-BY-DAY ITINERARY
+### DAY 1 - [Theme]
+- **MORNING:** [Specific activity with details]
+- **AFTERNOON:** [Specific activity with details]
+- **EVENING:** [Dinner recommendation with details]
+
+[Continue for all {duration} days with different activities each day]
+
+## 🏨 HOTEL RECOMMENDATIONS
+1. **[Hotel Name]** — [Price range] — [Why it's great]
+2. **[Hotel Name]** — [Price range] — [Why it's great]
+3. **[Hotel Name]** — [Price range] — [Why it's great]
+
+## 🍽️ MUST-TRY RESTAURANTS
+1. **[Restaurant]** — [Cuisine type] — [Must-try dish]
+2. **[Restaurant]** — [Cuisine type] — [Must-try dish]
+3. **[Restaurant]** — [Cuisine type] — [Must-try dish]
+4. **[Restaurant]** — [Cuisine type] — [Must-try dish]
+5. **[Restaurant]** — [Cuisine type] — [Must-try dish]
+
+## 💰 BUDGET BREAKDOWN
+- **Accommodation:** $X per night
+- **Food:** $X per day per person
+- **Activities:** $X total
+- **Local Transport:** $X total
+- **TOTAL ESTIMATE: $X for {travelers} traveler(s)**
+
+## 💡 TOP TRAVEL TIPS
+1. [Important tip about the destination]
+2. [Best time to visit specific attractions]
+3. [Cultural etiquette or local customs]
+4. [Safety or health tip]
+5. [Money saving tip]
+
+## 🚗 GETTING AROUND
+[3-4 sentences about local transport options, costs, and recommendations]
+"""
+
+    response = groq_client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[
+            {
+                "role": "system",
+                "content": "You are an expert travel planner. Always write detailed, specific, and helpful travel itineraries."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        max_tokens=3000,
+        temperature=0.7
+    )
+
+    return response.choices[0].message.content
+
+
+# ── GENERATE BUTTON ──
+generate_btn = st.button(
+    "🚀 GENERATE MY TRAVEL ITINERARY!",
+    use_container_width=True
+)
 
 if generate_btn:
     if not destination:
@@ -201,33 +276,13 @@ if generate_btn:
     elif not travel_dates:
         st.error("⚠️ PLEASE ENTER YOUR TRAVEL DATES!")
     else:
-        interests_text = ", ".join(interests) if interests else "General Sightseeing"
-        special_text   = special_requirements if special_requirements else "None"
-        user_query = (
-            f"{duration}-day trip to {destination}. "
-            f"Dates: {travel_dates}. Budget: {budget}. "
-            f"Travelers: {travelers}. Interests: {interests_text}. "
-            f"Notes: {special_text}."
-        )
-        with st.spinner("🔍 AI IS PLANNING YOUR TRIP... PLEASE WAIT 30–60 SECONDS ⏳"):
+        with st.spinner("🔍 AI IS SEARCHING THE WEB & PLANNING YOUR TRIP... 30–60 SECONDS ⏳"):
             try:
-                agent    = initialize_agent()
-                response = agent.invoke({"input": user_query})
-                result   = response.get("output", "")
-
-                if "Agent stopped" in result or len(result) < 100:
-                    llm_direct = ChatGroq(
-                        model="llama-3.1-8b-instant",
-                        temperature=0.5,
-                        api_key=GROQ_API_KEY,
-                        max_tokens=3000
-                    )
-                    result = llm_direct.invoke(
-                        f"Create a detailed {duration}-day itinerary for "
-                        f"{destination}. Dates:{travel_dates}. Budget:{budget}. "
-                        f"Travelers:{travelers}. Interests:{interests_text}. "
-                        f"Use UPPERCASE markdown headings for all sections."
-                    ).content
+                result = generate_itinerary(
+                    destination, duration, budget,
+                    travel_dates, travelers,
+                    interests, special_requirements
+                )
 
                 st.markdown("---")
                 st.markdown(
@@ -235,18 +290,21 @@ if generate_btn:
                     unsafe_allow_html=True
                 )
                 st.markdown(result)
+
                 st.download_button(
                     "📥 DOWNLOAD ITINERARY AS TEXT FILE",
                     data=result,
                     file_name=f"itinerary_{destination.replace(' ','_')}.txt",
                     mime="text/plain"
                 )
+
             except Exception as e:
                 st.error(f"❌ ERROR: {str(e)}")
-                st.info("💡 TRY A SHORTER TRIP OR SIMPLER DESTINATION!")
+                st.info("💡 PLEASE TRY AGAIN IN A FEW SECONDS!")
 
+# ── FOOTER ──
 st.markdown("---")
 st.markdown(
-    '<div class="footer">BUILT WITH ❤️ USING GROQ AI + TAVILY + LANGCHAIN + STREAMLIT</div>',
+    '<div class="footer">BUILT WITH ❤️ USING GROQ AI + TAVILY + STREAMLIT</div>',
     unsafe_allow_html=True
 )

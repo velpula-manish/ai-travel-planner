@@ -1,7 +1,3 @@
-%%writefile requirements.txt
-groq
-tavily-python
-streamlit
-langchain-groq
-langchain-community
-langchain
+groq==0.9.0
+tavily-python==0.3.3
+streamlit==1.38.0

@@ -882,27 +882,3 @@ st.markdown(
     '</div>',
     unsafe_allow_html=True
 )
-```
-
----
-
-## Commit & Done! ✅
-```
-1. GitHub → app.py → ✏️ Edit
-2. Select all → Delete → Paste above code
-3. Commit changes
-4. Wait 2-3 minutes
-5. All features working! 🎉
-```
-
-## Everything Included 🧠
-```
-✅ Weather — Fixed with User-Agent header
-✅ Buttons — 4 columns, full names visible
-✅ Multi-Language — 12 languages
-✅ Booking Links — Flight/Train/Bus/Hotel
-✅ Google Maps — Attractions/Hotels/Restaurants
-✅ PDF Download — Beautiful branded PDF
-✅ WhatsApp Share — Pre-filled message
-✅ Email — Send to inbox
-✅ Watermark — Manish Travel Planner

@@ -1,14 +1,11 @@
-
 import streamlit as st
 import os
 from groq import Groq
 from tavily import TavilyClient
 
-# ── API KEYS FROM STREAMLIT SECRETS ──
 GROQ_API_KEY   = st.secrets["GROQ_API_KEY"]
 TAVILY_API_KEY = st.secrets["TAVILY_API_KEY"]
 
-# ── PAGE CONFIG ──
 st.set_page_config(
     page_title="AI Travel Planner ✈️",
     page_icon="🌍",
@@ -16,7 +13,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ── STYLING ──
 st.markdown("""
 <style>
     .main-title {
@@ -78,6 +74,13 @@ st.markdown("""
         font-size: 0.85rem;
         margin-top: 10px;
     }
+    .budget-box {
+        background: transparent;
+        border: 2px solid #a78bfa;
+        border-radius: 10px;
+        padding: 12px;
+        margin-top: 5px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -124,13 +127,73 @@ st.markdown('<div class="section-title">📝 TELL US ABOUT YOUR DREAM TRIP</div>
             unsafe_allow_html=True)
 
 col1, col2 = st.columns(2)
+
 with col1:
-    destination = st.text_input("🗺️ DESTINATION", placeholder="e.g. Paris, France")
-    duration    = st.slider("📅 TRIP DURATION (DAYS)", 1, 14, 3)
-    budget      = st.selectbox("💰 BUDGET RANGE", [
-        "Budget ($500–$1000)", "Moderate ($1000–$2500)",
-        "Comfortable ($2500–$5000)", "Luxury ($5000+)"
-    ], index=1)
+    destination  = st.text_input("🗺️ DESTINATION", placeholder="e.g. Paris, France")
+    duration     = st.slider("📅 TRIP DURATION (DAYS)", 1, 14, 3)
+
+    # ── BUDGET SECTION (Currency + Amount) ──
+    st.markdown("##### 💰 BUDGET")
+
+    # Row: Currency selector + Amount input side by side
+    b_col1, b_col2 = st.columns([1, 2])
+
+    with b_col1:
+        currency = st.selectbox(
+            "CURRENCY",
+            options=["₹ INR", "$ USD", "€ EUR", "£ GBP"],
+            index=0   # Default: Indian Rupee
+        )
+
+    with b_col2:
+        # Dynamic placeholder based on currency
+        if "INR" in currency:
+            placeholder = "e.g. 50000"
+            hint        = "Typical range: ₹20,000 – ₹2,00,000"
+        elif "USD" in currency:
+            placeholder = "e.g. 1500"
+            hint        = "Typical range: $500 – $10,000"
+        elif "EUR" in currency:
+            placeholder = "e.g. 1200"
+            hint        = "Typical range: €500 – €8,000"
+        else:
+            placeholder = "e.g. 1000"
+            hint        = "Typical range: £400 – £7,000"
+
+        budget_amount = st.text_input(
+            "AMOUNT",
+            placeholder=placeholder,
+            help=hint
+        )
+
+    # Show budget tier suggestion based on amount
+    if budget_amount:
+        try:
+            amt = float(budget_amount.replace(",", ""))
+            if "INR" in currency:
+                if amt < 30000:
+                    tier = "🟢 Budget Trip"
+                elif amt < 80000:
+                    tier = "🟡 Moderate Trip"
+                elif amt < 150000:
+                    tier = "🟠 Comfortable Trip"
+                else:
+                    tier = "🔴 Luxury Trip"
+            else:  # USD/EUR/GBP
+                if amt < 800:
+                    tier = "🟢 Budget Trip"
+                elif amt < 2500:
+                    tier = "🟡 Moderate Trip"
+                elif amt < 5000:
+                    tier = "🟠 Comfortable Trip"
+                else:
+                    tier = "🔴 Luxury Trip"
+            st.caption(f"**{tier}**")
+        except:
+            pass
+
+    # Final budget string passed to AI
+    budget = f"{currency} {budget_amount}" if budget_amount else f"{currency} (not specified)"
 
 with col2:
     travel_dates = st.text_input("🗓️ TRAVEL DATES", placeholder="e.g. June 10–17, 2025")
@@ -151,39 +214,28 @@ special_requirements = st.text_area(
 st.markdown("---")
 
 
-# ── CORE FUNCTION: Search + Generate ──
+# ── CORE FUNCTION ──
 def generate_itinerary(destination, duration, budget, travel_dates,
                         travelers, interests, special_requirements):
-    """
-    Step 1: Search web with Tavily
-    Step 2: Send results to Groq to write itinerary
-    No LangChain needed — direct API calls!
-    """
 
-    # ── STEP 1: Search with Tavily ──
     tavily = TavilyClient(api_key=TAVILY_API_KEY)
-
     search_query = (
         f"best things to do hotels restaurants in {destination} "
-        f"travel tips budget {budget}"
+        f"travel tips"
     )
-
     try:
         search_results = tavily.search(
             query=search_query,
             max_results=3,
             search_depth="basic"
         )
-        # Extract text from results
         web_info = ""
         for r in search_results.get("results", []):
             web_info += f"\n- {r.get('title','')}: {r.get('content','')[:300]}"
     except Exception:
-        web_info = f"Popular destination with great attractions, hotels and restaurants."
+        web_info = "Popular destination with great attractions, hotels and restaurants."
 
-    # ── STEP 2: Generate with Groq ──
-    groq_client = Groq(api_key=GROQ_API_KEY)
-
+    groq_client  = Groq(api_key=GROQ_API_KEY)
     interests_text = ", ".join(interests) if interests else "General Sightseeing"
     special_text   = special_requirements if special_requirements else "None"
 
@@ -192,7 +244,7 @@ def generate_itinerary(destination, duration, budget, travel_dates,
 Here is real-time web information about {destination}:
 {web_info}
 
-Using this information, create a detailed {duration}-day travel itinerary for:
+Create a detailed {duration}-day travel itinerary for:
 - Destination: {destination}
 - Travel Dates: {travel_dates}
 - Budget: {budget}
@@ -200,48 +252,48 @@ Using this information, create a detailed {duration}-day travel itinerary for:
 - Interests: {interests_text}
 - Special Requirements: {special_text}
 
-Write a complete, detailed itinerary with EXACTLY these sections
-using UPPERCASE headings:
+IMPORTANT: Show ALL prices in BOTH {budget.split()[0]} AND USD where relevant.
+
+Write a complete itinerary with EXACTLY these UPPERCASE sections:
 
 ## 🌍 DESTINATION OVERVIEW
-[Write 3-4 sentences about the destination]
+[3-4 sentences about the destination]
 
 ## 📅 DAY-BY-DAY ITINERARY
 ### DAY 1 - [Theme]
-- **MORNING:** [Specific activity with details]
-- **AFTERNOON:** [Specific activity with details]
-- **EVENING:** [Dinner recommendation with details]
-
-[Continue for all {duration} days with different activities each day]
+- **MORNING:** [Activity with details]
+- **AFTERNOON:** [Activity with details]
+- **EVENING:** [Dinner with details]
+[Continue for all {duration} days]
 
 ## 🏨 HOTEL RECOMMENDATIONS
-1. **[Hotel Name]** — [Price range] — [Why it's great]
-2. **[Hotel Name]** — [Price range] — [Why it's great]
-3. **[Hotel Name]** — [Price range] — [Why it's great]
+1. **[Hotel Name]** — [Price in {budget.split()[0]} & USD] — [Why great]
+2. **[Hotel Name]** — [Price in {budget.split()[0]} & USD] — [Why great]
+3. **[Hotel Name]** — [Price in {budget.split()[0]} & USD] — [Why great]
 
 ## 🍽️ MUST-TRY RESTAURANTS
-1. **[Restaurant]** — [Cuisine type] — [Must-try dish]
-2. **[Restaurant]** — [Cuisine type] — [Must-try dish]
-3. **[Restaurant]** — [Cuisine type] — [Must-try dish]
-4. **[Restaurant]** — [Cuisine type] — [Must-try dish]
-5. **[Restaurant]** — [Cuisine type] — [Must-try dish]
+1. **[Restaurant]** — [Cuisine] — [Must-try dish] — [Approx cost in {budget.split()[0]}]
+2. **[Restaurant]** — [Cuisine] — [Must-try dish] — [Approx cost in {budget.split()[0]}]
+3. **[Restaurant]** — [Cuisine] — [Must-try dish] — [Approx cost in {budget.split()[0]}]
+4. **[Restaurant]** — [Cuisine] — [Must-try dish] — [Approx cost in {budget.split()[0]}]
+5. **[Restaurant]** — [Cuisine] — [Must-try dish] — [Approx cost in {budget.split()[0]}]
 
 ## 💰 BUDGET BREAKDOWN
-- **Accommodation:** $X per night
-- **Food:** $X per day per person
-- **Activities:** $X total
-- **Local Transport:** $X total
-- **TOTAL ESTIMATE: $X for {travelers} traveler(s)**
+- **Accommodation:** [Amount in {budget.split()[0]}] per night
+- **Food:** [Amount in {budget.split()[0]}] per day per person
+- **Activities:** [Amount in {budget.split()[0]}] total
+- **Local Transport:** [Amount in {budget.split()[0]}] total
+- **TOTAL ESTIMATE: [Amount in {budget.split()[0]}] for {travelers} traveler(s)**
 
 ## 💡 TOP TRAVEL TIPS
-1. [Important tip about the destination]
-2. [Best time to visit specific attractions]
-3. [Cultural etiquette or local customs]
-4. [Safety or health tip]
+1. [Tip about destination]
+2. [Best time to visit attractions]
+3. [Cultural etiquette]
+4. [Safety tip]
 5. [Money saving tip]
 
 ## 🚗 GETTING AROUND
-[3-4 sentences about local transport options, costs, and recommendations]
+[3-4 sentences about local transport with costs in {budget.split()[0]}]
 """
 
     response = groq_client.chat.completions.create(
@@ -249,17 +301,13 @@ using UPPERCASE headings:
         messages=[
             {
                 "role": "system",
-                "content": "You are an expert travel planner. Always write detailed, specific, and helpful travel itineraries."
+                "content": "You are an expert travel planner. Always write detailed, specific, helpful travel itineraries with accurate local prices."
             },
-            {
-                "role": "user",
-                "content": prompt
-            }
+            {"role": "user", "content": prompt}
         ],
         max_tokens=3000,
         temperature=0.7
     )
-
     return response.choices[0].message.content
 
 
@@ -274,6 +322,8 @@ if generate_btn:
         st.error("⚠️ PLEASE ENTER A DESTINATION!")
     elif not travel_dates:
         st.error("⚠️ PLEASE ENTER YOUR TRAVEL DATES!")
+    elif not budget_amount:
+        st.error("⚠️ PLEASE ENTER YOUR BUDGET AMOUNT!")
     else:
         with st.spinner("🔍 AI IS SEARCHING THE WEB & PLANNING YOUR TRIP... 30–60 SECONDS ⏳"):
             try:
@@ -282,21 +332,18 @@ if generate_btn:
                     travel_dates, travelers,
                     interests, special_requirements
                 )
-
                 st.markdown("---")
                 st.markdown(
                     '<div class="success-header">✅ YOUR PERSONALIZED ITINERARY IS READY!</div>',
                     unsafe_allow_html=True
                 )
                 st.markdown(result)
-
                 st.download_button(
                     "📥 DOWNLOAD ITINERARY AS TEXT FILE",
                     data=result,
                     file_name=f"itinerary_{destination.replace(' ','_')}.txt",
                     mime="text/plain"
                 )
-
             except Exception as e:
                 st.error(f"❌ ERROR: {str(e)}")
                 st.info("💡 PLEASE TRY AGAIN IN A FEW SECONDS!")
@@ -307,3 +354,23 @@ st.markdown(
     '<div class="footer">BUILT WITH ❤️ USING GROQ AI + TAVILY + STREAMLIT</div>',
     unsafe_allow_html=True
 )
+```
+
+---
+
+## What Changed 🧠
+
+| Before | After |
+|---|---|
+| Fixed dropdown ($500-$1000 etc.) | ✅ Type ANY amount you want |
+| Only USD | ✅ INR, USD, EUR, GBP options |
+| No feedback | ✅ Shows Budget/Moderate/Luxury tier |
+| Fixed prices in output | ✅ AI shows prices in YOUR currency |
+
+---
+
+## It Will Look Like This
+```
+💰 BUDGET
+[₹ INR ▼]  [50000        ]
+            🟡 Moderate Trip

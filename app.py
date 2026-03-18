@@ -4,30 +4,33 @@ import requests
 import urllib.parse
 from groq import Groq
 from tavily import TavilyClient
+from fpdf import FPDF
+import base64
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 GROQ_API_KEY   = st.secrets["GROQ_API_KEY"]
 TAVILY_API_KEY = st.secrets["TAVILY_API_KEY"]
 
+# ── EMAIL CONFIG FROM SECRETS ──
+# Add these to Streamlit secrets too!
+EMAIL_SENDER   = st.secrets.get("EMAIL_SENDER", "")
+EMAIL_PASSWORD = st.secrets.get("EMAIL_PASSWORD", "")
+
 st.set_page_config(
     page_title="AI Travel Planner ✈️",
-    page_icon="",
+    page_icon="🌍",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 st.markdown("""
 <style>
-/* ══════════════════════════════════
-   BACKGROUND — Sky Blue
-══════════════════════════════════ */
 [data-testid="stAppViewContainer"] {
     background: linear-gradient(160deg, #0c1445, #1a237e, #283593) !important;
     min-height: 100vh;
 }
-
-/* ══════════════════════════════════
-   SIDEBAR
-══════════════════════════════════ */
 [data-testid="stSidebar"] {
     background: linear-gradient(180deg, #0d1b2a 0%, #1b2a4a 100%) !important;
     border-right: 2px solid #38bdf8 !important;
@@ -36,25 +39,14 @@ st.markdown("""
 [data-testid="stSidebar"] li,
 [data-testid="stSidebar"] span,
 [data-testid="stSidebar"] div,
-[data-testid="stSidebar"] label {
-    color: #bae6fd !important;
-}
-[data-testid="stSidebar"] strong {
-    color: #38bdf8 !important;
-}
+[data-testid="stSidebar"] label { color: #bae6fd !important; }
+[data-testid="stSidebar"] strong { color: #38bdf8 !important; }
 [data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3 {
-    color: #7dd3fc !important;
-}
-
-/* ══════════════════════════════════
-   WATERMARK
-══════════════════════════════════ */
+[data-testid="stSidebar"] h3 { color: #7dd3fc !important; }
 [data-testid="stAppViewContainer"]::before {
     content: "MANISH TRAVEL PLANNER";
     position: fixed;
-    top: 45%;
-    left: 55%;
+    top: 45%; left: 55%;
     transform: translate(-50%, -50%) rotate(-30deg);
     font-size: 4.5rem;
     font-weight: 900;
@@ -65,26 +57,14 @@ st.markdown("""
     letter-spacing: 5px;
     text-transform: uppercase;
 }
-
-/* ══════════════════════════════════
-   ALL MAIN TEXT
-══════════════════════════════════ */
 [data-testid="stAppViewContainer"] p,
 [data-testid="stAppViewContainer"] li,
 [data-testid="stAppViewContainer"] span,
 [data-testid="stAppViewContainer"] div,
-[data-testid="stAppViewContainer"] label {
-    color: #e0f2fe !important;
-}
+[data-testid="stAppViewContainer"] label { color: #e0f2fe !important; }
 [data-testid="stAppViewContainer"] h1,
 [data-testid="stAppViewContainer"] h2,
-[data-testid="stAppViewContainer"] h3 {
-    color: #7dd3fc !important;
-}
-
-/* ══════════════════════════════════
-   TITLE
-══════════════════════════════════ */
+[data-testid="stAppViewContainer"] h3 { color: #7dd3fc !important; }
 .main-title {
     text-align: center;
     font-size: 2.6rem;
@@ -98,105 +78,69 @@ st.markdown("""
     background-clip: text;
 }
 .subtitle {
-    text-align: center;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    color: #7dd3fc;
-    opacity: 0.85;
-    margin-bottom: 3px;
+    text-align: center; font-size: 0.9rem;
+    text-transform: uppercase; letter-spacing: 3px;
+    color: #7dd3fc; opacity: 0.85; margin-bottom: 3px;
 }
 .brand-tag {
-    text-align: center;
-    font-size: 0.8rem;
-    letter-spacing: 3px;
-    color: #38bdf8;
-    font-weight: 700;
-    text-transform: uppercase;
-    margin-bottom: 10px;
+    text-align: center; font-size: 0.8rem;
+    letter-spacing: 3px; color: #38bdf8;
+    font-weight: 700; text-transform: uppercase; margin-bottom: 10px;
 }
-
-/* ══════════════════════════════════
-   SECTION TITLES
-══════════════════════════════════ */
 .section-title {
-    font-size: 1.05rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    color: #38bdf8 !important;
-    margin-bottom: 10px;
-    border-left: 4px solid #0284c7;
-    padding-left: 10px;
+    font-size: 1.05rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 2px;
+    color: #38bdf8 !important; margin-bottom: 10px;
+    border-left: 4px solid #0284c7; padding-left: 10px;
 }
-
-/* ══════════════════════════════════
-   WEATHER BOX
-══════════════════════════════════ */
 .weather-box {
     background: linear-gradient(135deg,
-        rgba(2, 132, 199, 0.3),
-        rgba(3, 105, 161, 0.4));
-    border: 1.5px solid #38bdf8;
-    border-radius: 12px;
-    padding: 12px 16px;
-    margin: 8px 0 12px 0;
-    font-size: 0.92rem;
-    font-weight: 600;
-    color: #e0f2fe !important;
-    line-height: 1.9;
-    box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2);
+        rgba(2,132,199,0.3), rgba(3,105,161,0.4));
+    border: 1.5px solid #38bdf8; border-radius: 12px;
+    padding: 12px 16px; margin: 8px 0 12px 0;
+    font-size: 0.92rem; font-weight: 600;
+    color: #e0f2fe !important; line-height: 1.9;
+    box-shadow: 0 4px 15px rgba(56,189,248,0.2);
 }
-
-/* ══════════════════════════════════
-   POPULAR DESTINATION BUTTONS
-   EQUAL SIZE + VISIBLE TEXT
-══════════════════════════════════ */
+.booking-card {
+    background: linear-gradient(135deg,
+        rgba(2,132,199,0.2), rgba(3,105,161,0.3));
+    border: 1.5px solid #38bdf8; border-radius: 14px;
+    padding: 15px 18px; margin: 8px 0;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+.booking-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(56,189,248,0.3);
+}
 div[data-testid="column"] .stButton > button {
     background: linear-gradient(135deg, #0369a1, #0284c7) !important;
     color: #e0f2fe !important;
-    font-size: 0.78rem !important;
-    font-weight: 800 !important;
-    height: 55px !important;
-    min-height: 55px !important;
-    max-height: 55px !important;
-    padding: 4px 6px !important;
-    border-radius: 10px !important;
-    border: 1.5px solid #38bdf8 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    white-space: normal !important;
-    overflow: hidden !important;
+    font-size: 0.78rem !important; font-weight: 800 !important;
+    height: 55px !important; min-height: 55px !important;
+    max-height: 55px !important; padding: 4px 6px !important;
+    border-radius: 10px !important; border: 1.5px solid #38bdf8 !important;
+    text-transform: uppercase !important; letter-spacing: 0.5px !important;
+    white-space: normal !important; overflow: hidden !important;
     transition: all 0.2s !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 100% !important;
-    line-height: 1.3 !important;
-    text-align: center !important;
+    display: flex !important; align-items: center !important;
+    justify-content: center !important; width: 100% !important;
+    line-height: 1.3 !important; text-align: center !important;
 }
 div[data-testid="column"] .stButton > button:hover {
     background: linear-gradient(135deg, #0284c7, #38bdf8) !important;
-    color: white !important;
-    border-color: #7dd3fc !important;
+    color: white !important; border-color: #7dd3fc !important;
     transform: translateY(-2px) !important;
     box-shadow: 0 6px 20px rgba(56,189,248,0.4) !important;
 }
-
-/* ══════════════════════════════════
-   GENERATE BUTTON
-══════════════════════════════════ */
 .stButton > button {
     width: 100%;
     background: linear-gradient(135deg, #0369a1, #0284c7, #38bdf8) !important;
-    color: white !important;
-    font-size: 1.2rem !important;
-    font-weight: 900 !important;
-    padding: 18px 30px !important;
-    border-radius: 14px !important;
-    border: none !important;
-    text-transform: uppercase !important;
-    letter-spacing: 2px !important;
+    color: white !important; font-size: 1.2rem !important;
+    font-weight: 900 !important; padding: 18px 30px !important;
+    border-radius: 14px !important; border: none !important;
+    text-transform: uppercase !important; letter-spacing: 2px !important;
     box-shadow: 0 8px 32px rgba(56,189,248,0.4) !important;
     transition: all 0.3s !important;
 }
@@ -204,184 +148,81 @@ div[data-testid="column"] .stButton > button:hover {
     transform: translateY(-3px) !important;
     box-shadow: 0 14px 40px rgba(56,189,248,0.6) !important;
 }
-
-/* ══════════════════════════════════
-   SLIDER — SKY BLUE & VISIBLE
-══════════════════════════════════ */
-.stSlider > div > div > div > div {
-    background: #38bdf8 !important;
+.success-header {
+    background: linear-gradient(135deg, #0369a1, #0284c7, #38bdf8);
+    color: white !important; padding: 18px 25px;
+    border-radius: 14px; font-size: 1.3rem; font-weight: 900;
+    margin-bottom: 20px; text-align: center;
+    text-transform: uppercase; letter-spacing: 3px;
+    box-shadow: 0 8px 32px rgba(56,189,248,0.4);
 }
-.stSlider > div > div > div {
-    background: rgba(56, 189, 248, 0.3) !important;
-}
-[data-testid="stSlider"] div[role="slider"] {
-    background: #38bdf8 !important;
-    border: 3px solid white !important;
-    box-shadow: 0 0 8px rgba(56,189,248,0.8) !important;
-}
-.stSlider p, .stSlider span, .stSlider div {
+.result-container {
+    border: 1.5px solid #38bdf8; border-radius: 16px;
+    padding: 25px 30px; margin-bottom: 20px;
+    background: rgba(3,105,161,0.15);
     color: #e0f2fe !important;
 }
-
-/* ══════════════════════════════════
-   INPUT FIELDS — VISIBLE TEXT
-══════════════════════════════════ */
 .stTextInput > div > div > input,
 .stTextArea > div > div > textarea,
 .stNumberInput > div > div > input {
-    background: rgba(3, 105, 161, 0.3) !important;
+    background: rgba(3,105,161,0.3) !important;
     border: 1.5px solid #38bdf8 !important;
-    border-radius: 8px !important;
-    color: #ffffff !important;
+    border-radius: 8px !important; color: #ffffff !important;
     font-weight: 600 !important;
 }
-.stTextInput > div > div > input::placeholder,
-.stTextArea > div > div > textarea::placeholder {
-    color: #7dd3fc !important;
-    opacity: 0.7 !important;
-}
-.stTextInput > div > div > input:focus,
-.stTextArea > div > div > textarea:focus {
-    border-color: #7dd3fc !important;
-    box-shadow: 0 0 0 2px rgba(125,211,252,0.3) !important;
-}
-
-/* ══════════════════════════════════
-   SELECTBOX — VISIBLE OPTIONS
-══════════════════════════════════ */
 .stSelectbox > div > div {
-    background: rgba(3, 105, 161, 0.4) !important;
+    background: rgba(3,105,161,0.4) !important;
     border: 1.5px solid #38bdf8 !important;
-    color: #ffffff !important;
-    border-radius: 8px !important;
+    color: #ffffff !important; border-radius: 8px !important;
 }
-.stSelectbox > div > div > div {
-    color: #ffffff !important;
-}
-/* Dropdown options list */
+.stSelectbox > div > div > div { color: #ffffff !important; }
 [data-baseweb="select"] ul {
     background: #0c1445 !important;
     border: 1px solid #38bdf8 !important;
 }
 [data-baseweb="select"] li {
-    color: #e0f2fe !important;
-    background: #0c1445 !important;
+    color: #e0f2fe !important; background: #0c1445 !important;
 }
 [data-baseweb="select"] li:hover {
-    background: #0369a1 !important;
-    color: white !important;
+    background: #0369a1 !important; color: white !important;
 }
-
-/* ══════════════════════════════════
-   MULTISELECT — VISIBLE OPTIONS
-══════════════════════════════════ */
-[data-baseweb="tag"] {
-    background: #0284c7 !important;
-    color: white !important;
-}
-[data-baseweb="tag"] span {
-    color: white !important;
-}
+[data-baseweb="tag"] { background: #0284c7 !important; color: white !important; }
+[data-baseweb="tag"] span { color: white !important; }
 .stMultiSelect > div > div {
-    background: rgba(3, 105, 161, 0.4) !important;
+    background: rgba(3,105,161,0.4) !important;
     border: 1.5px solid #38bdf8 !important;
 }
-.stMultiSelect > div > div > div {
-    color: #e0f2fe !important;
-}
-
-/* ══════════════════════════════════
-   NUMBER INPUT BUTTONS
-══════════════════════════════════ */
-.stNumberInput button {
-    background: #0284c7 !important;
-    color: white !important;
-    border: 1px solid #38bdf8 !important;
-}
-
-/* ══════════════════════════════════
-   SUCCESS HEADER
-══════════════════════════════════ */
-.success-header {
-    background: linear-gradient(135deg, #0369a1, #0284c7, #38bdf8);
-    color: white !important;
-    padding: 18px 25px;
-    border-radius: 14px;
-    font-size: 1.3rem;
-    font-weight: 900;
-    margin-bottom: 20px;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    box-shadow: 0 8px 32px rgba(56,189,248,0.4);
-}
-
-/* ══════════════════════════════════
-   RESULT BOX
-══════════════════════════════════ */
-.result-container {
-    border: 1.5px solid #38bdf8;
-    border-radius: 16px;
-    padding: 25px 30px;
-    margin-bottom: 20px;
-    background: rgba(3, 105, 161, 0.15);
-    color: #e0f2fe !important;
-}
-
-/* ══════════════════════════════════
-   DOWNLOAD BUTTON
-══════════════════════════════════ */
 .stDownloadButton > button {
     background: linear-gradient(135deg, #1e40af, #2563eb) !important;
-    color: white !important;
-    font-weight: 800 !important;
-    font-size: 0.95rem !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1px !important;
-    border-radius: 10px !important;
-    border: none !important;
-    padding: 12px !important;
+    color: white !important; font-weight: 800 !important;
+    font-size: 0.95rem !important; text-transform: uppercase !important;
+    letter-spacing: 1px !important; border-radius: 10px !important;
+    border: none !important; padding: 12px !important;
     box-shadow: 0 4px 15px rgba(37,99,235,0.4) !important;
     width: 100% !important;
 }
-
-/* ══════════════════════════════════
-   DIVIDER
-══════════════════════════════════ */
-hr {
-    border-color: rgba(56,189,248,0.3) !important;
-}
-
-/* ══════════════════════════════════
-   FOOTER
-══════════════════════════════════ */
+hr { border-color: rgba(56,189,248,0.3) !important; }
 .footer {
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    opacity: 0.5;
-    font-size: 0.75rem;
-    margin-top: 5px;
-    color: #38bdf8 !important;
+    text-align: center; text-transform: uppercase;
+    letter-spacing: 2px; opacity: 0.5;
+    font-size: 0.75rem; margin-top: 5px; color: #38bdf8 !important;
 }
 .footer-brand {
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    font-size: 0.7rem;
-    color: #38bdf8 !important;
-    opacity: 0.6;
-    margin-top: 3px;
+    text-align: center; text-transform: uppercase;
+    letter-spacing: 3px; font-size: 0.7rem;
+    color: #38bdf8 !important; opacity: 0.6; margin-top: 3px;
 }
 </style>
 """, unsafe_allow_html=True)
 
 
-# ── SIDEBAR ──
+# ══════════════════════════════════════
+# SIDEBAR
+# ══════════════════════════════════════
 with st.sidebar:
     st.markdown(
         "<h2 style='color:#38bdf8;text-transform:uppercase;"
-        "letter-spacing:2px;font-size:1rem;'> MANISH TRAVEL PLANNER</h2>",
+        "letter-spacing:2px;font-size:1rem;'>🌍 MANISH TRAVEL PLANNER</h2>",
         unsafe_allow_html=True
     )
     st.markdown("---")
@@ -398,22 +239,26 @@ with st.sidebar:
     1. CLICK A **POPULAR DESTINATION**
     2. SET YOUR **TRIP DURATION**
     3. CHOOSE **CURRENCY & BUDGET**
-    4. ENTER **TRAVEL DATES**
-    5. PICK YOUR **INTERESTS**
-    6. CLICK **GENERATE** AND WAIT!
-    7. **SHARE** ON WHATSAPP!
+    4. PICK YOUR **LANGUAGE**
+    5. ENTER **TRAVEL DATES**
+    6. PICK YOUR **INTERESTS**
+    7. CLICK **GENERATE** AND WAIT!
+    8. **BOOK TICKETS** OR **SHARE**!
     """)
     st.markdown("---")
     st.markdown("### ✈️ FEATURES")
     st.markdown("""
     - 🗺️ DAY-BY-DAY ITINERARY
     - 🌤️ LIVE WEATHER INFO
+    - 🌐 MULTI-LANGUAGE SUPPORT
     - 🏨 HOTEL RECOMMENDATIONS
     - 🍽️ RESTAURANT PICKS
     - 💰 MULTI-CURRENCY BUDGET
-    - 💡 LOCAL TRAVEL TIPS
+    - 🗺️ GOOGLE MAPS LINKS
+    - ✈️ FLIGHT/TRAIN/BUS BOOKING
+    - 📧 EMAIL ITINERARY
+    - 📥 PDF DOWNLOAD
     - 📱 WHATSAPP SHARING
-    - 📥 DOWNLOAD ITINERARY
     """)
     st.markdown("---")
     st.markdown(
@@ -423,7 +268,10 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-# ── HEADER ──
+
+# ══════════════════════════════════════
+# HEADER
+# ══════════════════════════════════════
 st.markdown('<div class="main-title">🌍 AI TRAVEL ITINERARY PLANNER</div>',
             unsafe_allow_html=True)
 st.markdown('<div class="subtitle">YOUR PERSONAL AI TRAVEL AGENT — POWERED BY GROQ + TAVILY</div>',
@@ -431,6 +279,7 @@ st.markdown('<div class="subtitle">YOUR PERSONAL AI TRAVEL AGENT — POWERED BY 
 st.markdown('<div class="brand-tag">— BY MANISH TRAVEL PLANNER —</div>',
             unsafe_allow_html=True)
 st.markdown("---")
+
 
 # ══════════════════════════════════════
 # POPULAR DESTINATIONS
@@ -442,28 +291,24 @@ if "selected_destination" not in st.session_state:
     st.session_state.selected_destination = ""
 
 popular_destinations = [
-    ("🗼", "PARIS"),      ("🗽", "NEW YORK"),
-    ("🏯", "TOKYO"),      ("🕌", "DUBAI"),
-    ("🏛️", "ROME"),       ("🌴", "BALI"),
-    ("🐘", "KERALA"),     ("⛩️", "RAJASTHAN"),
-    ("🏔️", "MANALI"),     ("🌊", "GOA"),
-    ("🏰", "LONDON"),     ("🗺️", "SINGAPORE"),
+    ("🗼","PARIS"),    ("🗽","NEW YORK"), ("🏯","TOKYO"),   ("🕌","DUBAI"),
+    ("🏛️","ROME"),     ("🌴","BALI"),     ("🐘","KERALA"),  ("⛩️","RAJASTHAN"),
+    ("🏔️","MANALI"),   ("🌊","GOA"),      ("🏰","LONDON"),  ("🗺️","SINGAPORE"),
 ]
 
 dest_cols = st.columns(6)
 for i, (emoji, city) in enumerate(popular_destinations):
     with dest_cols[i % 6]:
-        if st.button(
-            f"{emoji} {city}",
-            key=f"dest_{i}",
-            use_container_width=True
-        ):
+        if st.button(f"{emoji} {city}", key=f"dest_{i}", use_container_width=True):
             st.session_state.selected_destination = city.title()
             st.rerun()
 
 st.markdown("---")
 
-# ── INPUTS ──
+
+# ══════════════════════════════════════
+# INPUT FORM
+# ══════════════════════════════════════
 st.markdown('<div class="section-title">📝 TELL US ABOUT YOUR DREAM TRIP</div>',
             unsafe_allow_html=True)
 
@@ -481,84 +326,53 @@ with col1:
     # ── WEATHER WIDGET ──
     if destination and len(destination.strip()) > 2:
         try:
-            r1 = requests.get(
-                f"https://wttr.in/{destination}?format=3",
-                timeout=6
-            )
-            r2 = requests.get(
-                f"https://wttr.in/{destination}?format=%C+%t",
-                timeout=6
-            )
-            r3 = requests.get(
-                f"https://wttr.in/{destination}?format=💧+Humidity:+%h",
-                timeout=6
-            )
+            r1 = requests.get(f"https://wttr.in/{destination}?format=3", timeout=6)
+            r2 = requests.get(f"https://wttr.in/{destination}?format=%C+%t", timeout=6)
+            r3 = requests.get(f"https://wttr.in/{destination}?format=💧+Humidity:+%h", timeout=6)
             if r1.status_code == 200 and "Unknown" not in r1.text:
                 st.markdown(
                     f'<div class="weather-box">'
                     f'🌤️ <strong>LIVE WEATHER — {destination.upper()}</strong><br>'
                     f'📍 {r1.text.strip()}<br>'
-                    f'🌡️ CONDITIONS: {r2.text.strip() if r2.status_code==200 else "—"}<br>'
+                    f'🌡️ {r2.text.strip() if r2.status_code==200 else "—"}<br>'
                     f'{r3.text.strip() if r3.status_code==200 else ""}'
                     f'</div>',
                     unsafe_allow_html=True
                 )
-            else:
-                st.markdown(
-                    f'<div class="weather-box">'
-                    f'🌤️ WEATHER FOR {destination.upper()} — TYPE FULL CITY NAME FOR WEATHER'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
         except Exception:
-            st.markdown(
-                '<div class="weather-box">'
-                '🌤️ WEATHER TEMPORARILY UNAVAILABLE — PLEASE TRY AGAIN'
-                '</div>',
-                unsafe_allow_html=True
-            )
+            pass
 
-    # ── SLIDER — now visible ──
-    duration = st.slider(
-        "📅 TRIP DURATION (DAYS)",
-        min_value=1,
-        max_value=14,
-        value=3,
-        step=1
-    )
+    duration = st.slider("📅 TRIP DURATION (DAYS)", 1, 14, 3)
     st.markdown(
-        f"<p style='color:#38bdf8;font-weight:700;font-size:0.9rem;"
-        f"text-transform:uppercase;'>✅ SELECTED: {duration} DAY(S)</p>",
+        f"<p style='color:#38bdf8;font-weight:700;font-size:0.85rem;'>"
+        f"✅ SELECTED: {duration} DAY(S)</p>",
         unsafe_allow_html=True
     )
 
+    # ── BUDGET ──
     st.markdown("##### 💰 BUDGET")
     b1, b2 = st.columns([1, 2])
     with b1:
-        currency = st.selectbox(
-            "CURRENCY",
-            ["₹ INR", "$ USD", "€ EUR", "£ GBP"],
-            index=0
-        )
+        currency = st.selectbox("CURRENCY", ["₹ INR","$ USD","€ EUR","£ GBP"], index=0)
     with b2:
         ph_map = {
-            "INR": ("e.g. 50000",  "₹20,000 – ₹2,00,000"),
-            "USD": ("e.g. 1500",   "$500 – $10,000"),
-            "EUR": ("e.g. 1200",   "€500 – €8,000"),
-            "GBP": ("e.g. 1000",   "£400 – £7,000"),
+            "INR":("e.g. 50000","₹20,000–₹2,00,000"),
+            "USD":("e.g. 1500", "$500–$10,000"),
+            "EUR":("e.g. 1200", "€500–€8,000"),
+            "GBP":("e.g. 1000", "£400–£7,000"),
         }
-        curr_key      = [k for k in ph_map if k in currency][0]
-        ph, hint      = ph_map[curr_key]
+        curr_key = [k for k in ph_map if k in currency][0]
+        ph, hint = ph_map[curr_key]
         budget_amount = st.text_input("AMOUNT", placeholder=ph, help=hint)
 
     if budget_amount:
         try:
-            amt = float(budget_amount.replace(",", ""))
+            amt = float(budget_amount.replace(",",""))
             tiers = {
-                "INR": [(30000,"🟢 BUDGET"),(80000,"🟡 MODERATE"),(150000,"🟠 COMFORTABLE")],
-                "USD": [(800,  "🟢 BUDGET"),(2500, "🟡 MODERATE"),(5000,  "🟠 COMFORTABLE")],
-                "EUR": [(700,  "🟢 BUDGET"),(2000, "🟡 MODERATE"),(4000,  "🟠 COMFORTABLE")],
-                "GBP": [(600,  "🟢 BUDGET"),(1800, "🟡 MODERATE"),(3500,  "🟠 COMFORTABLE")],
+                "INR":[(30000,"🟢 BUDGET"),(80000,"🟡 MODERATE"),(150000,"🟠 COMFORTABLE")],
+                "USD":[(800,"🟢 BUDGET"),(2500,"🟡 MODERATE"),(5000,"🟠 COMFORTABLE")],
+                "EUR":[(700,"🟢 BUDGET"),(2000,"🟡 MODERATE"),(4000,"🟠 COMFORTABLE")],
+                "GBP":[(600,"🟢 BUDGET"),(1800,"🟡 MODERATE"),(3500,"🟠 COMFORTABLE")],
             }
             tier = "🔴 LUXURY TRIP"
             for limit, label in tiers[curr_key]:
@@ -566,8 +380,7 @@ with col1:
                     tier = f"{label} TRIP"
                     break
             st.markdown(
-                f"<p style='color:#38bdf8;font-weight:700;"
-                f"font-size:0.9rem;'>{tier}</p>",
+                f"<p style='color:#38bdf8;font-weight:700;font-size:0.85rem;'>{tier}</p>",
                 unsafe_allow_html=True
             )
         except Exception:
@@ -578,7 +391,33 @@ with col1:
 with col2:
     travel_dates = st.text_input("🗓️ TRAVEL DATES", placeholder="e.g. June 10–17, 2025")
     travelers    = st.number_input("👥 NUMBER OF TRAVELERS", 1, 20, 2)
-    interests    = st.multiselect("❤️ YOUR INTERESTS", [
+
+    # ══════════════════════════════════════
+    # FEATURE 1: MULTI-LANGUAGE SUPPORT
+    # ══════════════════════════════════════
+    language = st.selectbox(
+        "🌐 OUTPUT LANGUAGE",
+        options=[
+            "English",
+            "Hindi — हिन्दी",
+            "Tamil — தமிழ்",
+            "Telugu — తెలుగు",
+            "Kannada — ಕನ್ನಡ",
+            "Malayalam — മലയാളം",
+            "Bengali — বাংলা",
+            "Marathi — मराठी",
+            "French — Français",
+            "Spanish — Español",
+            "Arabic — عربي",
+            "Japanese — 日本語",
+        ],
+        index=0,
+        help="AI will write your itinerary in this language!"
+    )
+    # Extract just language name
+    lang_name = language.split("—")[0].strip()
+
+    interests = st.multiselect("❤️ YOUR INTERESTS", [
         "🏛️ HISTORY & CULTURE",  "🍽️ FOOD & DINING",
         "🎨 ART & MUSEUMS",       "🌿 NATURE & OUTDOORS",
         "🛍️ SHOPPING",            "🎭 NIGHTLIFE",
@@ -594,9 +433,148 @@ special_requirements = st.text_area(
 st.markdown("---")
 
 
-# ── GENERATOR ──
+# ══════════════════════════════════════
+# PDF GENERATOR
+# ══════════════════════════════════════
+def create_pdf(content, destination, duration, budget, travel_dates, travelers):
+    pdf = FPDF()
+    pdf.add_page()
+
+    # Header
+    pdf.set_fill_color(2, 132, 199)
+    pdf.rect(0, 0, 210, 35, 'F')
+    pdf.set_font("Arial", "B", 20)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(0, 12, "AI TRAVEL ITINERARY PLANNER", ln=True, align="C")
+    pdf.set_font("Arial", "B", 13)
+    pdf.cell(0, 8, "BY MANISH TRAVEL PLANNER", ln=True, align="C")
+    pdf.set_font("Arial", "", 10)
+    pdf.cell(0, 8, "ai-travel-planner-h7f7ryewjbufa5tdvfewnu.streamlit.app", ln=True, align="C")
+
+    # Trip summary box
+    pdf.set_fill_color(224, 242, 254)
+    pdf.rect(10, 40, 190, 30, 'F')
+    pdf.set_text_color(2, 132, 199)
+    pdf.set_font("Arial", "B", 11)
+    pdf.set_xy(12, 42)
+    pdf.cell(0, 6, f"DESTINATION: {destination.upper()}  |  DURATION: {duration} DAYS  |  TRAVELERS: {travelers}", ln=True)
+    pdf.set_xy(12, 50)
+    pdf.cell(0, 6, f"DATES: {travel_dates}  |  BUDGET: {budget}", ln=True)
+    pdf.set_xy(12, 58)
+    pdf.cell(0, 6, f"Generated by AI Travel Planner", ln=True)
+
+    # Content
+    pdf.set_xy(10, 75)
+    pdf.set_text_color(30, 30, 30)
+    pdf.set_font("Arial", "", 10)
+
+    # Clean content for PDF (remove emojis)
+    import re
+    clean_content = re.sub(r'[^\x00-\x7F]+', '', content)
+    clean_content = clean_content.replace("##", "\n").replace("**", "")
+
+    for line in clean_content.split('\n'):
+        line = line.strip()
+        if not line:
+            pdf.ln(3)
+            continue
+        if line.startswith("###"):
+            pdf.set_font("Arial", "B", 11)
+            pdf.set_text_color(2, 132, 199)
+            pdf.multi_cell(0, 7, line.replace("###","").strip())
+            pdf.set_font("Arial", "", 10)
+            pdf.set_text_color(30, 30, 30)
+        elif line.startswith("#"):
+            pdf.set_font("Arial", "B", 12)
+            pdf.set_text_color(1, 63, 120)
+            pdf.multi_cell(0, 8, line.replace("#","").strip())
+            pdf.set_font("Arial", "", 10)
+            pdf.set_text_color(30, 30, 30)
+        else:
+            pdf.multi_cell(0, 6, line)
+
+    # Footer
+    pdf.set_y(-20)
+    pdf.set_fill_color(2, 132, 199)
+    pdf.rect(0, pdf.get_y(), 210, 20, 'F')
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Arial", "B", 9)
+    pdf.cell(0, 8, "© MANISH TRAVEL PLANNER — ALL RIGHTS RESERVED", align="C")
+
+    return pdf.output(dest='S').encode('latin-1')
+
+
+# ══════════════════════════════════════
+# EMAIL SENDER
+# ══════════════════════════════════════
+def send_email(to_email, destination, itinerary, duration, travel_dates, budget):
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = f"✈️ YOUR {duration}-DAY {destination.upper()} TRAVEL ITINERARY"
+        msg["From"]    = EMAIL_SENDER
+        msg["To"]      = to_email
+
+        html_body = f"""
+        <html><body style="font-family:Arial;background:#0c1445;color:#e0f2fe;padding:20px;">
+        <div style="max-width:700px;margin:auto;background:#1a237e;
+                    border-radius:16px;overflow:hidden;">
+            <div style="background:#0284c7;padding:25px;text-align:center;">
+                <h1 style="color:white;text-transform:uppercase;
+                           letter-spacing:3px;margin:0;">
+                    🌍 AI TRAVEL ITINERARY PLANNER
+                </h1>
+                <p style="color:#bae6fd;text-transform:uppercase;
+                          letter-spacing:2px;margin:5px 0;">
+                    BY MANISH TRAVEL PLANNER
+                </p>
+            </div>
+            <div style="padding:20px;background:#e0f2fe;color:#0c1445;">
+                <table style="width:100%;background:#bae6fd;
+                              border-radius:10px;padding:15px;
+                              margin-bottom:20px;">
+                    <tr>
+                        <td><strong>📍 DESTINATION:</strong> {destination.upper()}</td>
+                        <td><strong>📅 DURATION:</strong> {duration} DAYS</td>
+                    </tr>
+                    <tr>
+                        <td><strong>🗓️ DATES:</strong> {travel_dates}</td>
+                        <td><strong>💰 BUDGET:</strong> {budget}</td>
+                    </tr>
+                </table>
+                <div style="white-space:pre-wrap;font-size:14px;
+                            line-height:1.8;color:#1a237e;">
+                    {itinerary}
+                </div>
+            </div>
+            <div style="background:#0284c7;padding:15px;text-align:center;">
+                <p style="color:white;font-size:12px;margin:0;
+                          text-transform:uppercase;letter-spacing:1px;">
+                    © MANISH TRAVEL PLANNER — ALL RIGHTS RESERVED<br>
+                    <a href="https://ai-travel-planner-h7f7ryewjbufa5tdvfewnu.streamlit.app"
+                       style="color:#bae6fd;">
+                        PLAN MORE TRIPS FOR FREE
+                    </a>
+                </p>
+            </div>
+        </div>
+        </body></html>
+        """
+
+        msg.attach(MIMEText(html_body, "html"))
+
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+            server.sendmail(EMAIL_SENDER, to_email, msg.as_string())
+        return True
+    except Exception as e:
+        return str(e)
+
+
+# ══════════════════════════════════════
+# ITINERARY GENERATOR
+# ══════════════════════════════════════
 def generate_itinerary(destination, duration, budget, travel_dates,
-                        travelers, interests, special_requirements):
+                        travelers, interests, special_requirements, lang_name):
     tavily = TavilyClient(api_key=TAVILY_API_KEY)
     try:
         res = tavily.search(
@@ -615,11 +593,14 @@ def generate_itinerary(destination, duration, budget, travel_dates,
     special_text   = special_requirements or "None"
     curr_symbol    = budget.split()[0]
 
-    prompt = f"""You are an expert AI Travel Planner.
+    prompt = f"""You are an expert AI Travel Planner with 20 years experience.
 
-Real-time info about {destination}: {web_info}
+IMPORTANT: Write the ENTIRE response in {lang_name} language only.
+If {lang_name} is not English, translate all headings and content to {lang_name}.
 
-Create detailed {duration}-day itinerary:
+Real-time web info about {destination}: {web_info}
+
+Create a detailed {duration}-day itinerary:
 - Destination: {destination}
 - Dates: {travel_dates}
 - Budget: {budget}
@@ -627,21 +608,26 @@ Create detailed {duration}-day itinerary:
 - Interests: {interests_text}
 - Notes: {special_text}
 
-Show prices in {curr_symbol} AND USD.
+Show ALL prices in {curr_symbol} AND USD.
 
 ## 🌍 DESTINATION OVERVIEW
-## 📅 DAY-BY-DAY ITINERARY (all {duration} days with MORNING/AFTERNOON/EVENING)
+## 📅 DAY-BY-DAY ITINERARY
+### DAY 1 — [THEME]
+- **MORNING:** [activity]
+- **AFTERNOON:** [activity]
+- **EVENING:** [dinner]
+[All {duration} days]
 ## 🏨 HOTEL RECOMMENDATIONS (3 options with prices)
 ## 🍽️ MUST-TRY RESTAURANTS (5 with prices in {curr_symbol})
 ## 💰 BUDGET BREAKDOWN (with TOTAL for {travelers} travelers)
 ## 💡 TOP TRAVEL TIPS (5 tips)
-## 🚗 GETTING AROUND (transport with costs)
+## 🚗 GETTING AROUND
 """
 
     resp = groq_client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[
-            {"role": "system", "content": "Expert travel planner. Detailed itineraries with accurate prices."},
+            {"role": "system", "content": f"Expert travel planner. Write entirely in {lang_name}. Detailed itineraries with accurate local prices."},
             {"role": "user",   "content": prompt}
         ],
         max_tokens=3000,
@@ -650,7 +636,9 @@ Show prices in {curr_symbol} AND USD.
     return resp.choices[0].message.content
 
 
-# ── GENERATE BUTTON ──
+# ══════════════════════════════════════
+# GENERATE BUTTON
+# ══════════════════════════════════════
 generate_btn = st.button(
     "🚀 GENERATE MY TRAVEL ITINERARY!",
     use_container_width=True
@@ -658,7 +646,7 @@ generate_btn = st.button(
 
 if generate_btn:
     if not destination:
-        st.error("⚠️ PLEASE ENTER A DESTINATION OR CLICK A POPULAR ONE ABOVE!")
+        st.error("⚠️ PLEASE ENTER A DESTINATION OR CLICK A POPULAR ONE!")
     elif not travel_dates:
         st.error("⚠️ PLEASE ENTER YOUR TRAVEL DATES!")
     elif not budget_amount:
@@ -669,72 +657,237 @@ if generate_btn:
                 result = generate_itinerary(
                     destination, duration, budget,
                     travel_dates, travelers,
-                    interests, special_requirements
+                    interests, special_requirements, lang_name
                 )
 
-                st.markdown("---")
-                st.markdown(
-                    '<div class="success-header">'
-                    '✅ YOUR PERSONALIZED ITINERARY IS READY!'
-                    '</div>',
-                    unsafe_allow_html=True
-                )
-                st.markdown(
-                    '<div class="result-container">',
-                    unsafe_allow_html=True
-                )
-                st.markdown(result)
-                st.markdown('</div>', unsafe_allow_html=True)
-
-                st.markdown("---")
-                st.markdown(
-                    '<div class="section-title">📤 SAVE OR SHARE YOUR ITINERARY</div>',
-                    unsafe_allow_html=True
-                )
-
-                dl_col, wa_col = st.columns(2)
-
-                with dl_col:
-                    st.download_button(
-                        label="📥 DOWNLOAD AS TEXT FILE",
-                        data=result,
-                        file_name=f"MANISH_{destination.replace(' ','_').upper()}_TRIP.txt",
-                        mime="text/plain",
-                        use_container_width=True
-                    )
-
-                with wa_col:
-                    share_msg = (
-                        f"✈️ *{duration}-DAY {destination.upper()} TRIP*\n"
-                        f"━━━━━━━━━━━━━━━━━━\n"
-                        f"📅 DATES: {travel_dates}\n"
-                        f"👥 TRAVELERS: {travelers}\n"
-                        f"💰 BUDGET: {budget}\n"
-                        f"━━━━━━━━━━━━━━━━━━\n\n"
-                        f"{result[:500]}...\n\n"
-                        f"🌍 PLAN YOUR FREE TRIP:\n"
-                        f"https://ai-travel-planner-h7f7ryewjbufa5tdvfewnu.streamlit.app\n"
-                        f"━━━━━━━━━━━━━━━━━━\n"
-                        f"_BY MANISH TRAVEL PLANNER_ 🗺️"
-                    )
-                    wa_url = f"https://wa.me/?text={urllib.parse.quote(share_msg)}"
-                    st.markdown(
-                        f'<a href="{wa_url}" target="_blank" style="text-decoration:none;">'
-                        f'<div style="background:linear-gradient(135deg,#15803d,#22c55e);'
-                        f'color:white;padding:13px 20px;border-radius:10px;'
-                        f'font-weight:900;font-size:0.95rem;text-transform:uppercase;'
-                        f'letter-spacing:1px;text-align:center;cursor:pointer;'
-                        f'box-shadow:0 4px 20px rgba(34,197,94,0.5);margin-top:6px;">'
-                        f'📱 SHARE ON WHATSAPP'
-                        f'</div></a>',
-                        unsafe_allow_html=True
-                    )
+                # Store result in session state
+                st.session_state.itinerary_result  = result
+                st.session_state.itinerary_dest    = destination
+                st.session_state.itinerary_ready   = True
 
             except Exception as e:
                 st.error(f"❌ ERROR: {str(e)}")
                 st.info("💡 PLEASE TRY AGAIN IN A FEW SECONDS!")
 
-# ── FOOTER ──
+
+# ══════════════════════════════════════
+# SHOW RESULT
+# ══════════════════════════════════════
+if st.session_state.get("itinerary_ready"):
+    result      = st.session_state.itinerary_result
+    destination = st.session_state.itinerary_dest
+
+    st.markdown("---")
+    st.markdown(
+        '<div class="success-header">✅ YOUR PERSONALIZED ITINERARY IS READY!</div>',
+        unsafe_allow_html=True
+    )
+    st.markdown('<div class="result-container">', unsafe_allow_html=True)
+    st.markdown(result)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ══════════════════════════════════════
+    # FEATURE 2: BOOKING LINKS
+    # ══════════════════════════════════════
+    st.markdown('<div class="section-title">✈️ BOOK YOUR TRIP</div>',
+                unsafe_allow_html=True)
+    st.caption("CLICK ANY BUTTON TO OPEN BOOKING WEBSITE WITH YOUR DESTINATION PRE-FILLED!")
+
+    dest_encoded = urllib.parse.quote(destination)
+
+    bk1, bk2, bk3, bk4, bk5 = st.columns(5)
+
+    with bk1:
+        st.markdown(
+            f'<a href="https://www.skyscanner.co.in/transport/flights/{dest_encoded}/" '
+            f'target="_blank" style="text-decoration:none;">'
+            f'<div class="booking-card">'
+            f'<div style="font-size:1.8rem;">✈️</div>'
+            f'<div style="color:#38bdf8;font-weight:800;font-size:0.8rem;'
+            f'text-transform:uppercase;margin-top:5px;">SKYSCANNER</div>'
+            f'<div style="color:#bae6fd;font-size:0.7rem;">FLIGHTS</div>'
+            f'</div></a>',
+            unsafe_allow_html=True
+        )
+
+    with bk2:
+        st.markdown(
+            f'<a href="https://www.makemytrip.com/flights/" '
+            f'target="_blank" style="text-decoration:none;">'
+            f'<div class="booking-card">'
+            f'<div style="font-size:1.8rem;">🛫</div>'
+            f'<div style="color:#38bdf8;font-weight:800;font-size:0.8rem;'
+            f'text-transform:uppercase;margin-top:5px;">MAKEMYTRIP</div>'
+            f'<div style="color:#bae6fd;font-size:0.7rem;">FLIGHTS + HOTELS</div>'
+            f'</div></a>',
+            unsafe_allow_html=True
+        )
+
+    with bk3:
+        st.markdown(
+            f'<a href="https://www.irctc.co.in/nget/train-search" '
+            f'target="_blank" style="text-decoration:none;">'
+            f'<div class="booking-card">'
+            f'<div style="font-size:1.8rem;">🚂</div>'
+            f'<div style="color:#38bdf8;font-weight:800;font-size:0.8rem;'
+            f'text-transform:uppercase;margin-top:5px;">IRCTC</div>'
+            f'<div style="color:#bae6fd;font-size:0.7rem;">TRAIN TICKETS</div>'
+            f'</div></a>',
+            unsafe_allow_html=True
+        )
+
+    with bk4:
+        st.markdown(
+            f'<a href="https://www.redbus.in/bus-tickets/{dest_encoded}" '
+            f'target="_blank" style="text-decoration:none;">'
+            f'<div class="booking-card">'
+            f'<div style="font-size:1.8rem;">🚌</div>'
+            f'<div style="color:#38bdf8;font-weight:800;font-size:0.8rem;'
+            f'text-transform:uppercase;margin-top:5px;">REDBUS</div>'
+            f'<div style="color:#bae6fd;font-size:0.7rem;">BUS TICKETS</div>'
+            f'</div></a>',
+            unsafe_allow_html=True
+        )
+
+    with bk5:
+        st.markdown(
+            f'<a href="https://www.booking.com/searchresults.html?ss={dest_encoded}" '
+            f'target="_blank" style="text-decoration:none;">'
+            f'<div class="booking-card">'
+            f'<div style="font-size:1.8rem;">🏨</div>'
+            f'<div style="color:#38bdf8;font-weight:800;font-size:0.8rem;'
+            f'text-transform:uppercase;margin-top:5px;">BOOKING.COM</div>'
+            f'<div style="color:#bae6fd;font-size:0.7rem;">HOTELS</div>'
+            f'</div></a>',
+            unsafe_allow_html=True
+        )
+
+    # ══════════════════════════════════════
+    # FEATURE 3: GOOGLE MAPS LINK
+    # ══════════════════════════════════════
+    st.markdown("---")
+    st.markdown('<div class="section-title">🗺️ EXPLORE ON GOOGLE MAPS</div>',
+                unsafe_allow_html=True)
+
+    maps_url = f"https://www.google.com/maps/search/{dest_encoded}+tourist+attractions"
+    hotels_url = f"https://www.google.com/maps/search/hotels+in+{dest_encoded}"
+    food_url = f"https://www.google.com/maps/search/restaurants+in+{dest_encoded}"
+
+    m1, m2, m3 = st.columns(3)
+    for col, label, emoji, url in [
+        (m1, "TOURIST ATTRACTIONS", "🏛️", maps_url),
+        (m2, "HOTELS NEARBY",       "🏨", hotels_url),
+        (m3, "RESTAURANTS",         "🍽️", food_url),
+    ]:
+        with col:
+            col.markdown(
+                f'<a href="{url}" target="_blank" style="text-decoration:none;">'
+                f'<div class="booking-card" style="padding:18px 10px;">'
+                f'<div style="font-size:2rem;">{emoji}</div>'
+                f'<div style="color:#38bdf8;font-weight:800;font-size:0.85rem;'
+                f'text-transform:uppercase;margin-top:8px;">{label}</div>'
+                f'<div style="color:#7dd3fc;font-size:0.75rem;margin-top:3px;">'
+                f'OPEN IN GOOGLE MAPS</div>'
+                f'</div></a>',
+                unsafe_allow_html=True
+            )
+
+    # ══════════════════════════════════════
+    # SAVE & SHARE SECTION
+    # ══════════════════════════════════════
+    st.markdown("---")
+    st.markdown('<div class="section-title">📤 SAVE OR SHARE YOUR ITINERARY</div>',
+                unsafe_allow_html=True)
+
+    c1, c2, c3 = st.columns(3)
+
+    # ── PDF DOWNLOAD ──
+    with c1:
+        try:
+            pdf_bytes = create_pdf(
+                result, destination, duration,
+                budget, travel_dates, travelers
+            )
+            st.download_button(
+                label="📄 DOWNLOAD AS PDF",
+                data=pdf_bytes,
+                file_name=f"MANISH_{destination.replace(' ','_').upper()}_ITINERARY.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+        except Exception:
+            st.download_button(
+                label="📥 DOWNLOAD AS TEXT",
+                data=result,
+                file_name=f"MANISH_{destination.replace(' ','_').upper()}_TRIP.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
+
+    # ── WHATSAPP SHARE ──
+    with c2:
+        share_msg = (
+            f"✈️ *{duration}-DAY {destination.upper()} TRIP*\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"📅 DATES: {travel_dates}\n"
+            f"👥 TRAVELERS: {travelers}\n"
+            f"💰 BUDGET: {budget}\n"
+            f"🌐 LANGUAGE: {lang_name}\n"
+            f"━━━━━━━━━━━━━━━━━━\n\n"
+            f"{result[:500]}...\n\n"
+            f"🌍 PLAN YOUR FREE TRIP:\n"
+            f"https://ai-travel-planner-h7f7ryewjbufa5tdvfewnu.streamlit.app\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"_BY MANISH TRAVEL PLANNER_ 🗺️"
+        )
+        wa_url = f"https://wa.me/?text={urllib.parse.quote(share_msg)}"
+        st.markdown(
+            f'<a href="{wa_url}" target="_blank" style="text-decoration:none;">'
+            f'<div style="background:linear-gradient(135deg,#15803d,#22c55e);'
+            f'color:white;padding:13px;border-radius:10px;font-weight:900;'
+            f'font-size:0.9rem;text-transform:uppercase;letter-spacing:1px;'
+            f'text-align:center;cursor:pointer;margin-top:0px;'
+            f'box-shadow:0 4px 15px rgba(34,197,94,0.4);">'
+            f'📱 SHARE ON WHATSAPP'
+            f'</div></a>',
+            unsafe_allow_html=True
+        )
+
+    # ── EMAIL ──
+    with c3:
+        with st.expander("📧 EMAIL ITINERARY", expanded=False):
+            user_email = st.text_input(
+                "YOUR EMAIL ADDRESS",
+                placeholder="yourname@gmail.com",
+                key="email_input"
+            )
+            if st.button("📧 SEND TO MY EMAIL", key="send_email", use_container_width=True):
+                if not user_email or "@" not in user_email:
+                    st.error("⚠️ PLEASE ENTER VALID EMAIL!")
+                elif not EMAIL_SENDER:
+                    st.warning(
+                        "⚠️ EMAIL NOT CONFIGURED YET!\n\n"
+                        "ADD TO STREAMLIT SECRETS:\n"
+                        "EMAIL_SENDER = 'your@gmail.com'\n"
+                        "EMAIL_PASSWORD = 'your_app_password'"
+                    )
+                else:
+                    with st.spinner("📧 SENDING EMAIL..."):
+                        result_send = send_email(
+                            user_email, destination, result,
+                            duration, travel_dates, budget
+                        )
+                        if result_send is True:
+                            st.success(f"✅ ITINERARY SENT TO {user_email}!")
+                        else:
+                            st.error(f"❌ EMAIL FAILED: {result_send}")
+
+
+# ══════════════════════════════════════
+# FOOTER
+# ══════════════════════════════════════
 st.markdown("---")
 st.markdown(
     '<div class="footer">BUILT WITH ❤️ USING GROQ AI + TAVILY + STREAMLIT</div>',

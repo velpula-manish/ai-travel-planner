@@ -1,3 +1,5 @@
 groq
 tavily-python
 streamlit
+requests
+fpdf2

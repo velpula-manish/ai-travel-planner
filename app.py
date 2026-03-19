@@ -2,13 +2,14 @@ import streamlit as st
 import os
 import requests
 import urllib.parse
-from groq import Groq
-from tavily import TavilyClient
-from fpdf import FPDF
+import datetime
+import re
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import re
+from groq import Groq
+from tavily import TavilyClient
+from fpdf import FPDF
 
 GROQ_API_KEY   = st.secrets["GROQ_API_KEY"]
 TAVILY_API_KEY = st.secrets["TAVILY_API_KEY"]
@@ -42,13 +43,12 @@ st.markdown("""
 [data-testid="stSidebar"] h3 { color: #7dd3fc !important; }
 [data-testid="stAppViewContainer"]::before {
     content: "MANISH TRAVEL PLANNER";
-    position: fixed;
-    top: 45%; left: 55%;
+    position: fixed; top: 45%; left: 55%;
     transform: translate(-50%, -50%) rotate(-30deg);
     font-size: 4.5rem; font-weight: 900;
-    color: rgba(56,189,248,0.07);
-    white-space: nowrap; pointer-events: none;
-    z-index: 0; letter-spacing: 5px; text-transform: uppercase;
+    color: rgba(56,189,248,0.07); white-space: nowrap;
+    pointer-events: none; z-index: 0;
+    letter-spacing: 5px; text-transform: uppercase;
 }
 [data-testid="stAppViewContainer"] p,
 [data-testid="stAppViewContainer"] li,
@@ -71,7 +71,8 @@ st.markdown("""
 }
 .brand-tag {
     text-align: center; font-size: 0.8rem; letter-spacing: 3px;
-    color: #38bdf8; font-weight: 700; text-transform: uppercase; margin-bottom: 10px;
+    color: #38bdf8; font-weight: 700;
+    text-transform: uppercase; margin-bottom: 10px;
 }
 .section-title {
     font-size: 1.05rem; font-weight: 800; text-transform: uppercase;
@@ -79,7 +80,7 @@ st.markdown("""
     border-left: 4px solid #0284c7; padding-left: 10px;
 }
 .weather-box {
-    background: linear-gradient(135deg, rgba(2,132,199,0.3), rgba(3,105,161,0.4));
+    background: linear-gradient(135deg,rgba(2,132,199,0.3),rgba(3,105,161,0.4));
     border: 1.5px solid #38bdf8; border-radius: 12px;
     padding: 12px 16px; margin: 8px 0 12px 0;
     font-size: 0.92rem; font-weight: 600;
@@ -87,7 +88,7 @@ st.markdown("""
     box-shadow: 0 4px 15px rgba(56,189,248,0.2);
 }
 .booking-card {
-    background: linear-gradient(135deg, rgba(2,132,199,0.2), rgba(3,105,161,0.3));
+    background: linear-gradient(135deg,rgba(2,132,199,0.2),rgba(3,105,161,0.3));
     border: 1.5px solid #38bdf8; border-radius: 14px;
     padding: 15px 18px; margin: 8px 0; text-align: center;
     transition: all 0.3s ease;
@@ -98,16 +99,16 @@ st.markdown("""
 }
 div[data-testid="column"] .stButton > button {
     background: linear-gradient(135deg, #0369a1, #0284c7) !important;
-    color: #e0f2fe !important;
-    font-size: 0.75rem !important; font-weight: 800 !important;
-    height: 50px !important; min-height: 50px !important;
-    max-height: 50px !important; padding: 2px 4px !important;
-    border-radius: 10px !important; border: 1.5px solid #38bdf8 !important;
-    text-transform: uppercase !important; letter-spacing: 0px !important;
-    white-space: nowrap !important; overflow: visible !important;
-    transition: all 0.2s !important; display: flex !important;
-    align-items: center !important; justify-content: center !important;
-    width: 100% !important; line-height: 1.2 !important; text-align: center !important;
+    color: #e0f2fe !important; font-size: 0.75rem !important;
+    font-weight: 800 !important; height: 50px !important;
+    min-height: 50px !important; max-height: 50px !important;
+    padding: 2px 4px !important; border-radius: 10px !important;
+    border: 1.5px solid #38bdf8 !important; text-transform: uppercase !important;
+    letter-spacing: 0px !important; white-space: nowrap !important;
+    overflow: visible !important; transition: all 0.2s !important;
+    display: flex !important; align-items: center !important;
+    justify-content: center !important; width: 100% !important;
+    line-height: 1.2 !important; text-align: center !important;
 }
 div[data-testid="column"] .stButton > button:hover {
     background: linear-gradient(135deg, #0284c7, #38bdf8) !important;
@@ -180,16 +181,19 @@ div[data-testid="column"] .stButton > button:hover {
     font-size: 0.95rem !important; text-transform: uppercase !important;
     letter-spacing: 1px !important; border-radius: 10px !important;
     border: none !important; padding: 12px !important;
-    box-shadow: 0 4px 15px rgba(37,99,235,0.4) !important; width: 100% !important;
+    box-shadow: 0 4px 15px rgba(37,99,235,0.4) !important;
+    width: 100% !important;
 }
 hr { border-color: rgba(56,189,248,0.3) !important; }
 .footer {
     text-align: center; text-transform: uppercase; letter-spacing: 2px;
-    opacity: 0.5; font-size: 0.75rem; margin-top: 5px; color: #38bdf8 !important;
+    opacity: 0.5; font-size: 0.75rem; margin-top: 5px;
+    color: #38bdf8 !important;
 }
 .footer-brand {
     text-align: center; text-transform: uppercase; letter-spacing: 3px;
-    font-size: 0.7rem; color: #38bdf8 !important; opacity: 0.6; margin-top: 3px;
+    font-size: 0.7rem; color: #38bdf8 !important;
+    opacity: 0.6; margin-top: 3px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -208,7 +212,7 @@ with st.sidebar:
     st.markdown("""
     - 🧠 **GROQ** — LLAMA 3.1 AI BRAIN
     - 🔍 **TAVILY** — REAL-TIME WEB SEARCH
-    - 🌤️ **WTTR.IN** — LIVE WEATHER DATA
+    - 🌤️ **OPEN-METEO** — LIVE WEATHER
     - 🎨 **STREAMLIT** — BEAUTIFUL UI
     """)
     st.markdown("---")
@@ -218,7 +222,7 @@ with st.sidebar:
     2. SET YOUR **TRIP DURATION**
     3. CHOOSE **CURRENCY & BUDGET**
     4. PICK YOUR **LANGUAGE**
-    5. ENTER **TRAVEL DATES**
+    5. SELECT **TRAVEL DATES**
     6. PICK YOUR **INTERESTS**
     7. CLICK **GENERATE** AND WAIT!
     8. **BOOK TICKETS** OR **SHARE**!
@@ -251,17 +255,22 @@ with st.sidebar:
 # ══════════════════════════════════════
 st.markdown('<div class="main-title">🌍 AI TRAVEL ITINERARY PLANNER</div>',
             unsafe_allow_html=True)
-st.markdown('<div class="subtitle">YOUR PERSONAL AI TRAVEL AGENT — POWERED BY GROQ + TAVILY</div>',
-            unsafe_allow_html=True)
+st.markdown(
+    '<div class="subtitle">YOUR PERSONAL AI TRAVEL AGENT'
+    ' — POWERED BY GROQ + TAVILY</div>',
+    unsafe_allow_html=True
+)
 st.markdown('<div class="brand-tag">— BY MANISH TRAVEL PLANNER —</div>',
             unsafe_allow_html=True)
 st.markdown("---")
 
 # ══════════════════════════════════════
-# POPULAR DESTINATIONS — 4 COLUMNS
+# POPULAR DESTINATIONS
 # ══════════════════════════════════════
-st.markdown('<div class="section-title">🔥 POPULAR DESTINATIONS — CLICK TO AUTO-FILL</div>',
-            unsafe_allow_html=True)
+st.markdown(
+    '<div class="section-title">🔥 POPULAR DESTINATIONS — CLICK TO AUTO-FILL</div>',
+    unsafe_allow_html=True
+)
 
 if "selected_destination" not in st.session_state:
     st.session_state.selected_destination = ""
@@ -269,23 +278,16 @@ if "itinerary_ready" not in st.session_state:
     st.session_state.itinerary_ready = False
 
 popular_destinations = [
-    ("🗼", "PARIS"),      ("🗽", "NEW YORK"),
-    ("🏯", "TOKYO"),      ("🕌", "DUBAI"),
-    ("🏛️", "ROME"),       ("🌴", "BALI"),
-    ("🐘", "KERALA"),     ("⛩️", "RAJASTHAN"),
-    ("🏔️", "MANALI"),     ("🌊", "GOA"),
-    ("🏰", "LONDON"),     ("🗺️", "SINGAPORE"),
+    ("🗼","PARIS"),    ("🗽","NEW YORK"), ("🏯","TOKYO"),   ("🕌","DUBAI"),
+    ("🏛️","ROME"),     ("🌴","BALI"),     ("🐘","KERALA"),  ("⛩️","RAJASTHAN"),
+    ("🏔️","MANALI"),   ("🌊","GOA"),      ("🏰","LONDON"),  ("🗺️","SINGAPORE"),
 ]
 
-# ✅ 4 COLUMNS — buttons fit perfectly
 dest_cols = st.columns(4)
 for i, (emoji, city) in enumerate(popular_destinations):
     with dest_cols[i % 4]:
-        if st.button(
-            f"{emoji} {city}",
-            key=f"dest_{i}",
-            use_container_width=True
-        ):
+        if st.button(f"{emoji} {city}", key=f"dest_{i}",
+                     use_container_width=True):
             st.session_state.selected_destination = city.title()
             st.rerun()
 
@@ -294,8 +296,10 @@ st.markdown("---")
 # ══════════════════════════════════════
 # INPUT FORM
 # ══════════════════════════════════════
-st.markdown('<div class="section-title">📝 TELL US ABOUT YOUR DREAM TRIP</div>',
-            unsafe_allow_html=True)
+st.markdown(
+    '<div class="section-title">📝 TELL US ABOUT YOUR DREAM TRIP</div>',
+    unsafe_allow_html=True
+)
 
 col1, col2 = st.columns(2)
 
@@ -308,115 +312,86 @@ with col1:
     if destination != st.session_state.selected_destination:
         st.session_state.selected_destination = destination
 
-   # ══════════════════════════════════════
-    # WEATHER WIDGET — OPEN-METEO (Free, No blocks!)
+    # ══════════════════════════════════════
+    # WEATHER — Open-Meteo (Never blocked!)
     # ══════════════════════════════════════
     if destination and len(destination.strip()) > 2:
-        weather_box = st.empty()
+        weather_placeholder = st.empty()
         try:
-            # Step 1: Get coordinates of city using geocoding API
-            geo_url = (
-                f"https://geocoding-api.open-meteo.com/v1/search"
-                f"?name={urllib.parse.quote(destination)}&count=1&language=en&format=json"
-            )
-            geo_resp = requests.get(geo_url, timeout=8)
-            geo_data = geo_resp.json()
+            geo = requests.get(
+                "https://geocoding-api.open-meteo.com/v1/search",
+                params={"name": destination, "count": 1,
+                        "language": "en", "format": "json"},
+                timeout=8
+            ).json()
 
-            if geo_data.get("results"):
-                lat  = geo_data["results"][0]["latitude"]
-                lon  = geo_data["results"][0]["longitude"]
-                city = geo_data["results"][0].get("name", destination)
-                country = geo_data["results"][0].get("country", "")
+            if geo.get("results"):
+                lat     = geo["results"][0]["latitude"]
+                lon     = geo["results"][0]["longitude"]
+                city_n  = geo["results"][0].get("name", destination)
+                country = geo["results"][0].get("country", "")
 
-                # Step 2: Get weather from Open-Meteo (100% free, no API key!)
-                weather_url = (
-                    f"https://api.open-meteo.com/v1/forecast"
-                    f"?latitude={lat}&longitude={lon}"
-                    f"&current_weather=true"
-                    f"&hourly=relativehumidity_2m,precipitation_probability"
-                    f"&timezone=auto&forecast_days=1"
-                )
-                w_resp = requests.get(weather_url, timeout=8)
-                w_data = w_resp.json()
+                wx = requests.get(
+                    "https://api.open-meteo.com/v1/forecast",
+                    params={
+                        "latitude": lat, "longitude": lon,
+                        "current_weather": "true",
+                        "hourly": "relativehumidity_2m,precipitation_probability",
+                        "timezone": "auto", "forecast_days": 1
+                    },
+                    timeout=8
+                ).json()
 
-                if "current_weather" in w_data:
-                    cw       = w_data["current_weather"]
-                    temp     = cw.get("temperature", "—")
-                    wind     = cw.get("windspeed", "—")
-                    wcode    = cw.get("weathercode", 0)
-                    humidity = w_data.get("hourly", {}).get(
-                        "relativehumidity_2m", [None]
-                    )[0]
-                    precip   = w_data.get("hourly", {}).get(
-                        "precipitation_probability", [None]
-                    )[0]
+                if "current_weather" in wx:
+                    cw      = wx["current_weather"]
+                    temp    = cw.get("temperature", "—")
+                    wind    = cw.get("windspeed", "—")
+                    wcode   = cw.get("weathercode", 0)
+                    hum     = wx.get("hourly", {}).get(
+                        "relativehumidity_2m", ["—"])[0]
+                    rain    = wx.get("hourly", {}).get(
+                        "precipitation_probability", ["—"])[0]
 
-                    # Weather code to description
-                    weather_codes = {
-                        0:"☀️ Clear Sky", 1:"🌤️ Mainly Clear",
-                        2:"⛅ Partly Cloudy", 3:"☁️ Overcast",
-                        45:"🌫️ Foggy", 48:"🌫️ Icy Fog",
-                        51:"🌦️ Light Drizzle", 61:"🌧️ Light Rain",
-                        63:"🌧️ Moderate Rain", 65:"🌧️ Heavy Rain",
-                        71:"🌨️ Light Snow", 73:"❄️ Moderate Snow",
-                        75:"❄️ Heavy Snow", 80:"🌦️ Rain Showers",
-                        95:"⛈️ Thunderstorm", 96:"⛈️ Heavy Thunderstorm",
+                    codes = {
+                        0:"☀️ Clear Sky",1:"🌤️ Mainly Clear",
+                        2:"⛅ Partly Cloudy",3:"☁️ Overcast",
+                        45:"🌫️ Foggy",51:"🌦️ Light Drizzle",
+                        61:"🌧️ Light Rain",63:"🌧️ Moderate Rain",
+                        65:"🌧️ Heavy Rain",71:"🌨️ Light Snow",
+                        80:"🌦️ Showers",95:"⛈️ Thunderstorm",
                     }
-                    condition = weather_codes.get(wcode, "🌡️ Unknown")
+                    cond = codes.get(wcode, "🌡️ Clear")
 
-                    weather_box.markdown(
+                    weather_placeholder.markdown(
                         f'<div class="weather-box">'
-                        f'<strong>🌤️ LIVE WEATHER — {city.upper()}, {country.upper()}</strong><br>'
-                        f'🌡️ TEMPERATURE: <strong>{temp}°C</strong> &nbsp;|&nbsp; {condition}<br>'
-                        f'💨 WIND SPEED: {wind} km/h &nbsp;|&nbsp; '
-                        f'💧 HUMIDITY: {humidity}% &nbsp;|&nbsp; '
-                        f'🌧️ RAIN CHANCE: {precip}%'
+                        f'<strong>🌤️ LIVE WEATHER'
+                        f' — {city_n.upper()}, {country.upper()}</strong><br>'
+                        f'🌡️ TEMP: <strong>{temp}°C</strong>'
+                        f' &nbsp;|&nbsp; {cond}<br>'
+                        f'💨 WIND: {wind} km/h'
+                        f' &nbsp;|&nbsp; 💧 HUMIDITY: {hum}%'
+                        f' &nbsp;|&nbsp; 🌧️ RAIN: {rain}%'
                         f'</div>',
                         unsafe_allow_html=True
                     )
                 else:
-                    weather_box.markdown(
+                    weather_placeholder.markdown(
                         f'<div class="weather-box">'
-                        f'🌤️ WEATHER DATA UNAVAILABLE FOR {destination.upper()}'
+                        f'🌤️ WEATHER UNAVAILABLE FOR {destination.upper()}'
                         f'</div>',
                         unsafe_allow_html=True
                     )
             else:
-                weather_box.markdown(
+                weather_placeholder.markdown(
                     f'<div class="weather-box">'
-                    f'🌤️ CITY NOT FOUND — TRY FULL CITY NAME (e.g. "New York" not "NY")'
+                    f'🌤️ CITY NOT FOUND — TRY FULL NAME (e.g. "New York")'
                     f'</div>',
                     unsafe_allow_html=True
                 )
         except Exception:
-            weather_box.markdown(
+            weather_placeholder.markdown(
                 '<div class="weather-box">'
                 '🌤️ WEATHER TEMPORARILY UNAVAILABLE'
-                '</div>',
-                unsafe_allow_html=True
-            )
-            if r1.status_code == 200 and len(r1.text.strip()) > 3:
-                weather_box.markdown(
-                    f'<div class="weather-box">'
-                    f'<strong>🌤️ LIVE WEATHER — {destination.upper()}</strong><br>'
-                    f'📍 {r1.text.strip()}<br>'
-                    f'🌡️ CONDITIONS: {r2.text.strip() if r2.status_code==200 else "—"}<br>'
-                    f'💧 {r3.text.strip() if r3.status_code==200 else "—"}'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
-            else:
-                weather_box.markdown(
-                    f'<div class="weather-box">'
-                    f'🌤️ WEATHER FOR {destination.upper()} — '
-                    f'ENTER FULL CITY NAME FOR ACCURATE WEATHER'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
-        except Exception:
-            weather_box.markdown(
-                '<div class="weather-box">'
-                '🌤️ WEATHER SERVICE TEMPORARILY UNAVAILABLE'
                 '</div>',
                 unsafe_allow_html=True
             )
@@ -451,10 +426,10 @@ with col1:
         try:
             amt = float(budget_amount.replace(",", ""))
             tiers = {
-                "INR": [(30000,"🟢 BUDGET"),(80000,"🟡 MODERATE"),(150000,"🟠 COMFORTABLE")],
-                "USD": [(800,  "🟢 BUDGET"),(2500, "🟡 MODERATE"),(5000,  "🟠 COMFORTABLE")],
-                "EUR": [(700,  "🟢 BUDGET"),(2000, "🟡 MODERATE"),(4000,  "🟠 COMFORTABLE")],
-                "GBP": [(600,  "🟢 BUDGET"),(1800, "🟡 MODERATE"),(3500,  "🟠 COMFORTABLE")],
+                "INR":[(30000,"🟢 BUDGET"),(80000,"🟡 MODERATE"),(150000,"🟠 COMFORTABLE")],
+                "USD":[(800,"🟢 BUDGET"),(2500,"🟡 MODERATE"),(5000,"🟠 COMFORTABLE")],
+                "EUR":[(700,"🟢 BUDGET"),(2000,"🟡 MODERATE"),(4000,"🟠 COMFORTABLE")],
+                "GBP":[(600,"🟢 BUDGET"),(1800,"🟡 MODERATE"),(3500,"🟠 COMFORTABLE")],
             }
             tier = "🔴 LUXURY TRIP"
             for limit, label in tiers[curr_key]:
@@ -462,68 +437,68 @@ with col1:
                     tier = f"{label} TRIP"
                     break
             st.markdown(
-                f"<p style='color:#38bdf8;font-weight:700;font-size:0.85rem;'>{tier}</p>",
+                f"<p style='color:#38bdf8;font-weight:700;"
+                f"font-size:0.85rem;'>{tier}</p>",
                 unsafe_allow_html=True
             )
         except Exception:
             pass
 
-    budget = f"{currency} {budget_amount}" if budget_amount else f"{currency} (not specified)"
+    budget = (f"{currency} {budget_amount}"
+              if budget_amount else f"{currency} (not specified)")
 
 with col2:
-# ── DATE PICKER ──
-    import datetime
+    # ══════════════════════════════════════
+    # DATE PICKER — FIXED (no format param)
+    # ══════════════════════════════════════
     st.markdown(
-        "<p style='color:#e0f2fe;font-weight:700;font-size:0.9rem;'>"
-        "🗓️ TRAVEL DATES</p>",
+        "<p style='color:#e0f2fe;font-weight:700;"
+        "font-size:0.9rem;margin-bottom:4px;'>🗓️ TRAVEL DATES</p>",
         unsafe_allow_html=True
     )
-    date_col1, date_col2 = st.columns(2)
-    with date_col1:
+
+    today      = datetime.date.today()
+    default_s  = today + datetime.timedelta(days=7)
+    default_e  = today + datetime.timedelta(days=7 + duration)
+
+    dc1, dc2 = st.columns(2)
+
+    with dc1:
         start_date = st.date_input(
-            "FROM DATE",
-            value=datetime.date.today() + datetime.timedelta(days=7),
-            min_value=datetime.date.today()
+            "FROM DATE ✈️",
+            value=default_s,
+            min_value=today,
+            key="start_date_input"
         )
-    with date_col2:
+
+    with dc2:
+        # ✅ KEY FIX: Use fixed minimum, not start_date variable
         end_date = st.date_input(
-            "TO DATE",
-            value=datetime.date.today() + datetime.timedelta(days=7 + duration),
-            min_value=start_date
+            "TO DATE 🏁",
+            value=default_e,
+            min_value=today,
+            key="end_date_input"
         )
 
-    trip_days    = (end_date - start_date).days
-    travel_dates = (
-        f"{start_date.strftime('%d %b %Y')} "
-        f"to {end_date.strftime('%d %b %Y')}"
-    )
-
-    if trip_days > 0:
+    # Validate after both picked
+    if end_date <= start_date:
+        st.warning("⚠️ TO DATE MUST BE AFTER FROM DATE!")
+        travel_dates = start_date.strftime('%d %b %Y')
+        trip_days    = duration
+    else:
+        trip_days    = (end_date - start_date).days
+        travel_dates = (
+            f"{start_date.strftime('%d %b %Y')} "
+            f"to {end_date.strftime('%d %b %Y')}"
+        )
         st.markdown(
             f"<p style='color:#38bdf8;font-weight:700;font-size:0.85rem;'>"
-            f"✅ TRIP: {trip_days} DAY(S) — "
-            f"{start_date.strftime('%d %b')} TO "
+            f"✅ {trip_days} DAY TRIP: "
+            f"{start_date.strftime('%d %b')} → "
             f"{end_date.strftime('%d %b %Y')}</p>",
             unsafe_allow_html=True
         )
-    else:
-        st.warning("⚠️ END DATE MUST BE AFTER START DATE!")
-        travel_dates = str(start_date)
 
-    # Calculate trip days
-    trip_days    = (end_date - start_date).days
-    travel_dates = f"{start_date.strftime('%d %b %Y')} to {end_date.strftime('%d %b %Y')}"
-
-    if trip_days > 0:
-        st.markdown(
-            f"<p style='color:#38bdf8;font-weight:700;font-size:0.85rem;'>"
-            f"✅ TRIP LENGTH: {trip_days} DAY(S) — "
-            f"{start_date.strftime('%d %b')} TO {end_date.strftime('%d %b %Y')}"
-            f"</p>",
-            unsafe_allow_html=True
-        )
-    elif trip_days == 0:
-        st.warning("⚠️ END DATE MUST BE AFTER START DATE!")
     travelers = st.number_input("👥 NUMBER OF TRAVELERS", 1, 20, 2)
 
     language = st.selectbox(
@@ -570,7 +545,8 @@ st.markdown("---")
 # ══════════════════════════════════════
 # PDF GENERATOR
 # ══════════════════════════════════════
-def create_pdf(content, destination, duration, budget, travel_dates, travelers):
+def create_pdf(content, destination, duration,
+               budget, travel_dates, travelers):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_fill_color(2, 132, 199)
@@ -581,16 +557,20 @@ def create_pdf(content, destination, duration, budget, travel_dates, travelers):
     pdf.set_font("Arial", "B", 13)
     pdf.cell(0, 8, "BY MANISH TRAVEL PLANNER", ln=True, align="C")
     pdf.set_font("Arial", "", 10)
-    pdf.cell(0, 8, "ai-travel-planner-h7f7ryewjbufa5tdvfewnu.streamlit.app",
+    pdf.cell(0, 8,
+             "ai-travel-planner-h7f7ryewjbufa5tdvfewnu.streamlit.app",
              ln=True, align="C")
     pdf.set_fill_color(224, 242, 254)
     pdf.rect(10, 40, 190, 30, 'F')
     pdf.set_text_color(2, 132, 199)
     pdf.set_font("Arial", "B", 11)
     pdf.set_xy(12, 42)
-    pdf.cell(0, 6,
-             f"DESTINATION: {destination.upper()}  |  DURATION: {duration} DAYS  |  TRAVELERS: {travelers}",
-             ln=True)
+    pdf.cell(
+        0, 6,
+        f"DESTINATION: {destination.upper()}  |  "
+        f"DURATION: {duration} DAYS  |  TRAVELERS: {travelers}",
+        ln=True
+    )
     pdf.set_xy(12, 50)
     pdf.cell(0, 6, f"DATES: {travel_dates}  |  BUDGET: {budget}", ln=True)
     pdf.set_xy(10, 75)
@@ -622,19 +602,27 @@ def create_pdf(content, destination, duration, budget, travel_dates, travelers):
     pdf.rect(0, pdf.get_y(), 210, 20, 'F')
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Arial", "B", 9)
-    pdf.cell(0, 8, "© MANISH TRAVEL PLANNER — ALL RIGHTS RESERVED", align="C")
+    pdf.cell(
+        0, 8,
+        "© MANISH TRAVEL PLANNER — ALL RIGHTS RESERVED",
+        align="C"
+    )
     return pdf.output(dest='S').encode('latin-1')
 
 
 # ══════════════════════════════════════
 # EMAIL SENDER
 # ══════════════════════════════════════
-def send_email(to_email, destination, itinerary, duration, travel_dates, budget):
+def send_email(to_email, destination, itinerary,
+               duration, travel_dates, budget):
     try:
         msg            = MIMEMultipart("alternative")
-        msg["Subject"] = f"✈️ YOUR {duration}-DAY {destination.upper()} TRAVEL ITINERARY"
-        msg["From"]    = EMAIL_SENDER
-        msg["To"]      = to_email
+        msg["Subject"] = (
+            f"✈️ YOUR {duration}-DAY "
+            f"{destination.upper()} TRAVEL ITINERARY"
+        )
+        msg["From"] = EMAIL_SENDER
+        msg["To"]   = to_email
         html_body = f"""
         <html><body style="font-family:Arial;background:#0c1445;
                            color:#e0f2fe;padding:20px;">
@@ -651,15 +639,20 @@ def send_email(to_email, destination, itinerary, duration, travel_dates, budget)
                 </p>
             </div>
             <div style="padding:20px;background:#e0f2fe;color:#0c1445;">
-                <table style="width:100%;background:#bae6fd;border-radius:10px;
-                              padding:15px;margin-bottom:20px;">
+                <table style="width:100%;background:#bae6fd;
+                              border-radius:10px;padding:15px;
+                              margin-bottom:20px;">
                     <tr>
-                        <td><strong>📍 DESTINATION:</strong> {destination.upper()}</td>
-                        <td><strong>📅 DURATION:</strong> {duration} DAYS</td>
+                        <td><strong>📍 DESTINATION:</strong>
+                            {destination.upper()}</td>
+                        <td><strong>📅 DURATION:</strong>
+                            {duration} DAYS</td>
                     </tr>
                     <tr>
-                        <td><strong>🗓️ DATES:</strong> {travel_dates}</td>
-                        <td><strong>💰 BUDGET:</strong> {budget}</td>
+                        <td><strong>🗓️ DATES:</strong>
+                            {travel_dates}</td>
+                        <td><strong>💰 BUDGET:</strong>
+                            {budget}</td>
                     </tr>
                 </table>
                 <div style="white-space:pre-wrap;font-size:14px;
@@ -693,13 +686,14 @@ def send_email(to_email, destination, itinerary, duration, travel_dates, budget)
 # ITINERARY GENERATOR
 # ══════════════════════════════════════
 def generate_itinerary(destination, duration, budget, travel_dates,
-                        travelers, interests, special_requirements, lang_name):
+                        travelers, interests, special_requirements,
+                        lang_name):
     tavily = TavilyClient(api_key=TAVILY_API_KEY)
     try:
         res = tavily.search(
-            query=f"best things to do hotels restaurants {destination} travel guide",
-            max_results=3,
-            search_depth="basic"
+            query=(f"best things to do hotels restaurants "
+                   f"{destination} travel guide"),
+            max_results=3, search_depth="basic"
         )
         web_info = "\n".join([
             f"- {r.get('title','')}: {r.get('content','')[:300]}"
@@ -758,8 +752,8 @@ Show ALL prices in {curr_symbol} AND USD equivalent.
 - **TOTAL: [{curr_symbol}] for {travelers} TRAVELER(S)**
 
 ## 💡 TOP TRAVEL TIPS
-1. [local tip]  2. [attraction tip]
-3. [cultural tip]  4. [safety tip]  5. [money saving tip]
+1. [local tip] 2. [attraction tip]
+3. [cultural tip] 4. [safety tip] 5. [money saving tip]
 
 ## 🚗 GETTING AROUND
 [Transport options with costs in {curr_symbol}]
@@ -769,8 +763,10 @@ Show ALL prices in {curr_symbol} AND USD equivalent.
         model="llama-3.1-8b-instant",
         messages=[
             {"role": "system",
-             "content": f"Expert travel planner. Write entirely in {lang_name}. "
-                        "Detailed itineraries with accurate local prices."},
+             "content": (
+                 f"Expert travel planner. Write entirely in {lang_name}. "
+                 "Detailed itineraries with accurate local prices."
+             )},
             {"role": "user", "content": prompt}
         ],
         max_tokens=3000,
@@ -790,15 +786,17 @@ generate_btn = st.button(
 if generate_btn:
     if not destination:
         st.error("⚠️ PLEASE ENTER A DESTINATION OR CLICK A POPULAR ONE!")
-    elif not travel_dates:
-        st.error("⚠️ PLEASE ENTER YOUR TRAVEL DATES!")
+    elif end_date <= start_date:
+        st.error("⚠️ PLEASE SELECT A VALID DATE RANGE!")
     elif not budget_amount:
         st.error("⚠️ PLEASE ENTER YOUR BUDGET AMOUNT!")
     else:
-        with st.spinner("🔍 AI IS SEARCHING & CRAFTING YOUR PERFECT TRIP... ⏳"):
+        with st.spinner(
+            "🔍 AI IS SEARCHING & CRAFTING YOUR PERFECT TRIP... ⏳"
+        ):
             try:
                 result = generate_itinerary(
-                    destination, duration, budget,
+                    destination, trip_days, budget,
                     travel_dates, travelers,
                     interests, special_requirements, lang_name
                 )
@@ -819,7 +817,9 @@ if st.session_state.get("itinerary_ready"):
 
     st.markdown("---")
     st.markdown(
-        '<div class="success-header">✅ YOUR PERSONALIZED ITINERARY IS READY!</div>',
+        '<div class="success-header">'
+        '✅ YOUR PERSONALIZED ITINERARY IS READY!'
+        '</div>',
         unsafe_allow_html=True
     )
     st.markdown('<div class="result-container">', unsafe_allow_html=True)
@@ -830,24 +830,26 @@ if st.session_state.get("itinerary_ready"):
     # ══════════════════════════════════════
     # BOOKING LINKS
     # ══════════════════════════════════════
-    st.markdown('<div class="section-title">✈️ BOOK YOUR TRIP</div>',
-                unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title">✈️ BOOK YOUR TRIP</div>',
+        unsafe_allow_html=True
+    )
     st.caption("CLICK ANY BUTTON TO OPEN BOOKING WEBSITE!")
 
-    dest_encoded = urllib.parse.quote(destination)
+    dest_enc = urllib.parse.quote(destination)
     bk1, bk2, bk3, bk4, bk5 = st.columns(5)
 
     booking_links = [
-        (bk1, "✈️", "SKYSCANNER", "FLIGHTS",
-         f"https://www.skyscanner.co.in/transport/flights/{dest_encoded}/"),
-        (bk2, "🛫", "MAKEMYTRIP", "FLIGHTS + HOTELS",
+        (bk1,"✈️","SKYSCANNER","FLIGHTS",
+         f"https://www.skyscanner.co.in/transport/flights/{dest_enc}/"),
+        (bk2,"🛫","MAKEMYTRIP","FLIGHTS + HOTELS",
          "https://www.makemytrip.com/flights/"),
-        (bk3, "🚂", "IRCTC", "TRAIN TICKETS",
+        (bk3,"🚂","IRCTC","TRAIN TICKETS",
          "https://www.irctc.co.in/nget/train-search"),
-        (bk4, "🚌", "REDBUS", "BUS TICKETS",
-         f"https://www.redbus.in/bus-tickets/{dest_encoded}"),
-        (bk5, "🏨", "BOOKING.COM", "HOTELS",
-         f"https://www.booking.com/searchresults.html?ss={dest_encoded}"),
+        (bk4,"🚌","REDBUS","BUS TICKETS",
+         f"https://www.redbus.in/bus-tickets/{dest_enc}"),
+        (bk5,"🏨","BOOKING.COM","HOTELS",
+         f"https://www.booking.com/searchresults.html?ss={dest_enc}"),
     ]
 
     for col, emoji, name, sub, url in booking_links:
@@ -867,17 +869,19 @@ if st.session_state.get("itinerary_ready"):
     # GOOGLE MAPS
     # ══════════════════════════════════════
     st.markdown("---")
-    st.markdown('<div class="section-title">🗺️ EXPLORE ON GOOGLE MAPS</div>',
-                unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title">🗺️ EXPLORE ON GOOGLE MAPS</div>',
+        unsafe_allow_html=True
+    )
 
     m1, m2, m3 = st.columns(3)
     maps_links = [
-        (m1, "🏛️", "TOURIST ATTRACTIONS",
-         f"https://www.google.com/maps/search/{dest_encoded}+tourist+attractions"),
-        (m2, "🏨", "HOTELS NEARBY",
-         f"https://www.google.com/maps/search/hotels+in+{dest_encoded}"),
-        (m3, "🍽️", "RESTAURANTS",
-         f"https://www.google.com/maps/search/restaurants+in+{dest_encoded}"),
+        (m1,"🏛️","TOURIST ATTRACTIONS",
+         f"https://www.google.com/maps/search/{dest_enc}+tourist+attractions"),
+        (m2,"🏨","HOTELS NEARBY",
+         f"https://www.google.com/maps/search/hotels+in+{dest_enc}"),
+        (m3,"🍽️","RESTAURANTS",
+         f"https://www.google.com/maps/search/restaurants+in+{dest_enc}"),
     ]
     for col, emoji, label, url in maps_links:
         with col:
@@ -897,22 +901,27 @@ if st.session_state.get("itinerary_ready"):
     # SAVE & SHARE
     # ══════════════════════════════════════
     st.markdown("---")
-    st.markdown('<div class="section-title">📤 SAVE OR SHARE YOUR ITINERARY</div>',
-                unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title">📤 SAVE OR SHARE YOUR ITINERARY</div>',
+        unsafe_allow_html=True
+    )
 
     c1, c2, c3 = st.columns(3)
 
-    # PDF DOWNLOAD
     with c1:
         try:
-            pdf_bytes = create_pdf(
-                result, destination, duration,
+            pdf_b = create_pdf(
+                result, destination, trip_days,
                 budget, travel_dates, travelers
             )
             st.download_button(
                 label="📄 DOWNLOAD AS PDF",
-                data=pdf_bytes,
-                file_name=f"MANISH_{destination.replace(' ','_').upper()}_ITINERARY.pdf",
+                data=pdf_b,
+                file_name=(
+                    f"MANISH_"
+                    f"{destination.replace(' ','_').upper()}"
+                    f"_ITINERARY.pdf"
+                ),
                 mime="application/pdf",
                 use_container_width=True
             )
@@ -920,15 +929,18 @@ if st.session_state.get("itinerary_ready"):
             st.download_button(
                 label="📥 DOWNLOAD AS TEXT",
                 data=result,
-                file_name=f"MANISH_{destination.replace(' ','_').upper()}_TRIP.txt",
+                file_name=(
+                    f"MANISH_"
+                    f"{destination.replace(' ','_').upper()}"
+                    f"_TRIP.txt"
+                ),
                 mime="text/plain",
                 use_container_width=True
             )
 
-    # WHATSAPP
     with c2:
         share_msg = (
-            f"✈️ *{duration}-DAY {destination.upper()} TRIP*\n"
+            f"✈️ *{trip_days}-DAY {destination.upper()} TRIP*\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"📅 DATES: {travel_dates}\n"
             f"👥 TRAVELERS: {travelers}\n"
@@ -947,14 +959,13 @@ if st.session_state.get("itinerary_ready"):
             f'<div style="background:linear-gradient(135deg,#15803d,#22c55e);'
             f'color:white;padding:13px;border-radius:10px;font-weight:900;'
             f'font-size:0.9rem;text-transform:uppercase;letter-spacing:1px;'
-            f'text-align:center;cursor:pointer;margin-top:0px;'
+            f'text-align:center;cursor:pointer;'
             f'box-shadow:0 4px 15px rgba(34,197,94,0.4);">'
             f'📱 SHARE ON WHATSAPP'
             f'</div></a>',
             unsafe_allow_html=True
         )
 
-    # EMAIL
     with c3:
         with st.expander("📧 EMAIL ITINERARY", expanded=False):
             user_email = st.text_input(
@@ -976,21 +987,26 @@ if st.session_state.get("itinerary_ready"):
                     )
                 else:
                     with st.spinner("📧 SENDING EMAIL..."):
-                        result_send = send_email(
+                        r = send_email(
                             user_email, destination,
-                            result, duration, travel_dates, budget
+                            result, trip_days,
+                            travel_dates, budget
                         )
-                        if result_send is True:
-                            st.success(f"✅ ITINERARY SENT TO {user_email}!")
+                        if r is True:
+                            st.success(
+                                f"✅ ITINERARY SENT TO {user_email}!"
+                            )
                         else:
-                            st.error(f"❌ EMAIL FAILED: {result_send}")
+                            st.error(f"❌ EMAIL FAILED: {r}")
 
 # ══════════════════════════════════════
 # FOOTER
 # ══════════════════════════════════════
 st.markdown("---")
 st.markdown(
-    '<div class="footer">BUILT WITH ❤️ USING GROQ AI + TAVILY + STREAMLIT</div>',
+    '<div class="footer">'
+    'BUILT WITH ❤️ USING GROQ AI + TAVILY + STREAMLIT'
+    '</div>',
     unsafe_allow_html=True
 )
 st.markdown(

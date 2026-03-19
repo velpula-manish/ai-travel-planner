@@ -9,18 +9,17 @@
     "orientation": "portrait",
     "icons": [
         {
-            "src": "https://raw.githubusercontent.com/velpula-manish/ai-travel-planner/main/icon.png",
+            "src": "https://cdn-icons-png.flaticon.com/512/3125/3125713.png",
             "sizes": "192x192",
             "type": "image/png",
             "purpose": "any maskable"
         },
         {
-            "src": "https://raw.githubusercontent.com/velpula-manish/ai-travel-planner/main/icon.png",
+            "src": "https://cdn-icons-png.flaticon.com/512/3125/3125713.png",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "any maskable"
         }
     ],
-    "categories": ["travel", "lifestyle", "productivity"],
-    "lang": "en"
+    "categories": ["travel", "lifestyle", "productivity"]
 }

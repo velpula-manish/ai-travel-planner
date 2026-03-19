@@ -456,10 +456,9 @@ with col2:
         "font-size:0.9rem;margin-bottom:4px;'>🗓️ TRAVEL DATES</p>",
         unsafe_allow_html=True
     )
-today     = datetime.date.today()
-    default_s = today + datetime.timedelta(days=7)
-
-    dc1, dc2  = st.columns(2)
+    today      = datetime.date.today()
+    default_s  = today + datetime.timedelta(days=7)
+    dc1, dc2   = st.columns(2)
 
     with dc1:
         start_date = st.date_input(
@@ -470,18 +469,14 @@ today     = datetime.date.today()
         )
 
     with dc2:
-        # ✅ AUTO-FILL: To Date = From Date + duration (slider value)
-        # When user changes FROM DATE or DURATION slider,
-        # TO DATE updates automatically!
-        auto_end  = start_date + datetime.timedelta(days=duration)
-        end_date  = st.date_input(
+        auto_end = start_date + datetime.timedelta(days=duration)
+        end_date = st.date_input(
             "TO DATE 🏁 (AUTO-FILLED)",
             value=auto_end,
             min_value=today,
             key="end_date_input"
         )
 
-    # Validate & show trip summary
     if end_date <= start_date:
         st.warning("⚠️ TO DATE MUST BE AFTER FROM DATE!")
         travel_dates = start_date.strftime('%d %b %Y')
@@ -496,8 +491,7 @@ today     = datetime.date.today()
             f"<p style='color:#38bdf8;font-weight:700;font-size:0.85rem;'>"
             f"✅ {trip_days} DAY TRIP: "
             f"{start_date.strftime('%d %b')} → "
-            f"{end_date.strftime('%d %b %Y')}"
-            f"</p>",
+            f"{end_date.strftime('%d %b %Y')}</p>",
             unsafe_allow_html=True
         )
         

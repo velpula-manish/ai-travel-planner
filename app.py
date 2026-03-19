@@ -471,24 +471,44 @@ with col1:
     budget = f"{currency} {budget_amount}" if budget_amount else f"{currency} (not specified)"
 
 with col2:
-    # ── DATE PICKER ──
-    st.markdown("🗓️ **TRAVEL DATES**")
+# ── DATE PICKER ──
     import datetime
+    st.markdown(
+        "<p style='color:#e0f2fe;font-weight:700;font-size:0.9rem;'>"
+        "🗓️ TRAVEL DATES</p>",
+        unsafe_allow_html=True
+    )
     date_col1, date_col2 = st.columns(2)
     with date_col1:
         start_date = st.date_input(
             "FROM DATE",
             value=datetime.date.today() + datetime.timedelta(days=7),
-            min_value=datetime.date.today(),
-            format="DD/MM/YYYY"
+            min_value=datetime.date.today()
         )
     with date_col2:
         end_date = st.date_input(
             "TO DATE",
             value=datetime.date.today() + datetime.timedelta(days=7 + duration),
-            min_value=start_date,
-            format="DD/MM/YYYY"
+            min_value=start_date
         )
+
+    trip_days    = (end_date - start_date).days
+    travel_dates = (
+        f"{start_date.strftime('%d %b %Y')} "
+        f"to {end_date.strftime('%d %b %Y')}"
+    )
+
+    if trip_days > 0:
+        st.markdown(
+            f"<p style='color:#38bdf8;font-weight:700;font-size:0.85rem;'>"
+            f"✅ TRIP: {trip_days} DAY(S) — "
+            f"{start_date.strftime('%d %b')} TO "
+            f"{end_date.strftime('%d %b %Y')}</p>",
+            unsafe_allow_html=True
+        )
+    else:
+        st.warning("⚠️ END DATE MUST BE AFTER START DATE!")
+        travel_dates = str(start_date)
 
     # Calculate trip days
     trip_days    = (end_date - start_date).days

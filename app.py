@@ -318,32 +318,72 @@ st.markdown(
     '<div class="section-title">🗺️ YOUR JOURNEY ROUTE</div>',
     unsafe_allow_html=True
 )
-st.markdown(
-    '<div class="route-box">',
-    unsafe_allow_html=True
-)
-r1, r2, r3 = st.columns([2, 1, 2])
+# ── ROUTE INPUTS — wider columns, no broken div ──
+r1, r2, r3 = st.columns([5, 1, 5])
 with r1:
+    st.markdown(
+        "<p style='color:#38bdf8;font-weight:800;"
+        "font-size:0.95rem;text-transform:uppercase;"
+        "letter-spacing:1px;margin-bottom:4px;'>"
+        "🏠 STARTING FROM</p>",
+        unsafe_allow_html=True
+    )
     from_city = st.text_input(
-        "🏠 STARTING FROM",
-        placeholder="e.g. Mumbai, Delhi, Chennai..."
+        "from_city_label",
+        placeholder="e.g. Mumbai, Delhi, Chennai...",
+        label_visibility="collapsed"
     )
 with r2:
     st.markdown(
-        "<div style='text-align:center;font-size:2rem;"
-        "padding-top:25px;'>✈️</div>",
+        "<div style='text-align:center;font-size:2.5rem;"
+        "padding-top:28px;'>✈️</div>",
         unsafe_allow_html=True
     )
 with r3:
+    st.markdown(
+        "<p style='color:#38bdf8;font-weight:800;"
+        "font-size:0.95rem;text-transform:uppercase;"
+        "letter-spacing:1px;margin-bottom:4px;'>"
+        "📍 GOING TO</p>",
+        unsafe_allow_html=True
+    )
     to_city = st.text_input(
-        "📍 GOING TO",
+        "to_city_label",
         value=st.session_state.selected_destination,
-        placeholder="e.g. Paris, Goa, Tokyo..."
+        placeholder="e.g. Paris, Goa, Tokyo...",
+        label_visibility="collapsed"
     )
     if to_city != st.session_state.selected_destination:
         st.session_state.selected_destination = to_city
 
-st.markdown('</div>', unsafe_allow_html=True)
+# Show route summary
+if from_city and to_city:
+    st.markdown(
+        f"<div style='background:linear-gradient(135deg,"
+        f"rgba(2,132,199,0.25),rgba(3,105,161,0.35));"
+        f"border:1.5px solid #38bdf8;border-radius:12px;"
+        f"padding:12px 20px;margin:8px 0;text-align:center;"
+        f"font-weight:800;font-size:1rem;color:#e0f2fe;"
+        f"letter-spacing:1px;'>"
+        f"🗺️ YOUR ROUTE: "
+        f"<span style='color:#38bdf8'>{from_city.upper()}</span>"
+        f" ✈️ "
+        f"<span style='color:#4ade80'>{to_city.upper()}</span>"
+        f"</div>",
+        unsafe_allow_html=True
+    )
+elif to_city:
+    st.markdown(
+        f"<div style='background:linear-gradient(135deg,"
+        f"rgba(2,132,199,0.25),rgba(3,105,161,0.35));"
+        f"border:1.5px solid #38bdf8;border-radius:12px;"
+        f"padding:12px 20px;margin:8px 0;text-align:center;"
+        f"font-weight:800;font-size:1rem;color:#e0f2fe;'>"
+        f"📍 DESTINATION: "
+        f"<span style='color:#4ade80'>{to_city.upper()}</span>"
+        f"</div>",
+        unsafe_allow_html=True
+    )
 
 # Use to_city as destination
 destination = to_city
@@ -366,7 +406,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-col1, col2 = st.columns(2)
+col1, col2 = st.columns([1, 1])
 
 with col1:
     # ══════════════════════════════════════
@@ -436,7 +476,7 @@ with col1:
     # BUDGET — WITH SMART ANALYSIS
     # ══════════════════════════════════════
     st.markdown("##### 💰 BUDGET")
-    b1, b2 = st.columns([1, 2])
+    b1, b2 = st.columns([1, 3])
     with b1:
         currency = st.selectbox(
             "CURRENCY",

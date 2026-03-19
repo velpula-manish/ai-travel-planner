@@ -87,6 +87,24 @@ st.markdown("""
     color: #e0f2fe !important; line-height: 1.9;
     box-shadow: 0 4px 15px rgba(56,189,248,0.2);
 }
+.route-box {
+    background: linear-gradient(135deg,rgba(2,132,199,0.25),rgba(3,105,161,0.35));
+    border: 1.5px solid #38bdf8; border-radius: 14px;
+    padding: 15px 20px; margin: 10px 0;
+    box-shadow: 0 4px 15px rgba(56,189,248,0.15);
+}
+.budget-warning {
+    background: linear-gradient(135deg,rgba(239,68,68,0.2),rgba(185,28,28,0.3));
+    border: 1.5px solid #ef4444; border-radius: 12px;
+    padding: 12px 16px; margin: 8px 0;
+    color: #fca5a5 !important; font-weight: 700;
+}
+.budget-ok {
+    background: linear-gradient(135deg,rgba(16,185,129,0.2),rgba(5,150,105,0.3));
+    border: 1.5px solid #10b981; border-radius: 12px;
+    padding: 12px 16px; margin: 8px 0;
+    color: #6ee7b7 !important; font-weight: 700;
+}
 .booking-card {
     background: linear-gradient(135deg,rgba(2,132,199,0.2),rgba(3,105,161,0.3));
     border: 1.5px solid #38bdf8; border-radius: 14px;
@@ -218,10 +236,10 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### 📌 HOW TO USE")
     st.markdown("""
-    1. CLICK A **POPULAR DESTINATION**
-    2. SET YOUR **TRIP DURATION**
-    3. CHOOSE **CURRENCY & BUDGET**
-    4. PICK YOUR **LANGUAGE**
+    1. ENTER **FROM & TO CITIES**
+    2. CLICK A **POPULAR DESTINATION**
+    3. SET **TRIP DURATION**
+    4. CHOOSE **CURRENCY & BUDGET**
     5. SELECT **TRAVEL DATES**
     6. PICK YOUR **INTERESTS**
     7. CLICK **GENERATE** AND WAIT!
@@ -230,12 +248,12 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### ✈️ FEATURES")
     st.markdown("""
-    - 🗺️ DAY-BY-DAY ITINERARY
+    - 🗺️ FULL JOURNEY PLANNING
     - 🌤️ LIVE WEATHER INFO
     - 🌐 MULTI-LANGUAGE SUPPORT
-    - 🏨 HOTEL RECOMMENDATIONS
-    - 🍽️ RESTAURANT PICKS
-    - 💰 MULTI-CURRENCY BUDGET
+    - 💰 STRICT BUDGET PLANNER
+    - 🏨 BUDGET-MATCHED HOTELS
+    - 🍽️ AFFORDABLE RESTAURANTS
     - 🗺️ GOOGLE MAPS LINKS
     - ✈️ FLIGHT/TRAIN/BUS BOOKING
     - 📧 EMAIL ITINERARY
@@ -294,26 +312,65 @@ for i, (emoji, city) in enumerate(popular_destinations):
 st.markdown("---")
 
 # ══════════════════════════════════════
-# INPUT FORM
+# ROUTE SECTION — FROM & TO
 # ══════════════════════════════════════
 st.markdown(
-    '<div class="section-title">📝 TELL US ABOUT YOUR DREAM TRIP</div>',
+    '<div class="section-title">🗺️ YOUR JOURNEY ROUTE</div>',
+    unsafe_allow_html=True
+)
+st.markdown(
+    '<div class="route-box">',
+    unsafe_allow_html=True
+)
+r1, r2, r3 = st.columns([2, 1, 2])
+with r1:
+    from_city = st.text_input(
+        "🏠 STARTING FROM",
+        placeholder="e.g. Mumbai, Delhi, Chennai..."
+    )
+with r2:
+    st.markdown(
+        "<div style='text-align:center;font-size:2rem;"
+        "padding-top:25px;'>✈️</div>",
+        unsafe_allow_html=True
+    )
+with r3:
+    to_city = st.text_input(
+        "📍 GOING TO",
+        value=st.session_state.selected_destination,
+        placeholder="e.g. Paris, Goa, Tokyo..."
+    )
+    if to_city != st.session_state.selected_destination:
+        st.session_state.selected_destination = to_city
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# Use to_city as destination
+destination = to_city
+
+st.markdown("---")
+
+# ══════════════════════════════════════
+# DURATION SLIDER — RENDERED FIRST
+# so auto-fill date works correctly
+# ══════════════════════════════════════
+st.markdown(
+    '<div class="section-title">📝 TRIP DETAILS</div>',
+    unsafe_allow_html=True
+)
+
+duration = st.slider("📅 TRIP DURATION (DAYS)", 1, 14, 3)
+st.markdown(
+    f"<p style='color:#38bdf8;font-weight:700;font-size:0.85rem;'>"
+    f"✅ SELECTED: {duration} DAY(S)</p>",
     unsafe_allow_html=True
 )
 
 col1, col2 = st.columns(2)
 
 with col1:
-    destination = st.text_input(
-        "🗺️ DESTINATION",
-        value=st.session_state.selected_destination,
-        placeholder="TYPE A CITY OR CLICK ABOVE!"
-    )
-    if destination != st.session_state.selected_destination:
-        st.session_state.selected_destination = destination
-
     # ══════════════════════════════════════
-    # WEATHER — Open-Meteo (Never blocked!)
+    # WEATHER
     # ══════════════════════════════════════
     if destination and len(destination.strip()) > 2:
         weather_placeholder = st.empty()
@@ -343,25 +400,23 @@ with col1:
                 ).json()
 
                 if "current_weather" in wx:
-                    cw      = wx["current_weather"]
-                    temp    = cw.get("temperature", "—")
-                    wind    = cw.get("windspeed", "—")
-                    wcode   = cw.get("weathercode", 0)
-                    hum     = wx.get("hourly", {}).get(
+                    cw    = wx["current_weather"]
+                    temp  = cw.get("temperature", "—")
+                    wind  = cw.get("windspeed", "—")
+                    wcode = cw.get("weathercode", 0)
+                    hum   = wx.get("hourly", {}).get(
                         "relativehumidity_2m", ["—"])[0]
-                    rain    = wx.get("hourly", {}).get(
+                    rain  = wx.get("hourly", {}).get(
                         "precipitation_probability", ["—"])[0]
-
                     codes = {
                         0:"☀️ Clear Sky",1:"🌤️ Mainly Clear",
                         2:"⛅ Partly Cloudy",3:"☁️ Overcast",
-                        45:"🌫️ Foggy",51:"🌦️ Light Drizzle",
+                        45:"🌫️ Foggy",51:"🌦️ Drizzle",
                         61:"🌧️ Light Rain",63:"🌧️ Moderate Rain",
-                        65:"🌧️ Heavy Rain",71:"🌨️ Light Snow",
+                        65:"🌧️ Heavy Rain",71:"🌨️ Snow",
                         80:"🌦️ Showers",95:"⛈️ Thunderstorm",
                     }
                     cond = codes.get(wcode, "🌡️ Clear")
-
                     weather_placeholder.markdown(
                         f'<div class="weather-box">'
                         f'<strong>🌤️ LIVE WEATHER'
@@ -374,35 +429,12 @@ with col1:
                         f'</div>',
                         unsafe_allow_html=True
                     )
-                else:
-                    weather_placeholder.markdown(
-                        f'<div class="weather-box">'
-                        f'🌤️ WEATHER UNAVAILABLE FOR {destination.upper()}'
-                        f'</div>',
-                        unsafe_allow_html=True
-                    )
-            else:
-                weather_placeholder.markdown(
-                    f'<div class="weather-box">'
-                    f'🌤️ CITY NOT FOUND — TRY FULL NAME (e.g. "New York")'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
         except Exception:
-            weather_placeholder.markdown(
-                '<div class="weather-box">'
-                '🌤️ WEATHER TEMPORARILY UNAVAILABLE'
-                '</div>',
-                unsafe_allow_html=True
-            )
+            pass
 
-    duration = st.slider("📅 TRIP DURATION (DAYS)", 1, 14, 3)
-    st.markdown(
-        f"<p style='color:#38bdf8;font-weight:700;font-size:0.85rem;'>"
-        f"✅ SELECTED: {duration} DAY(S)</p>",
-        unsafe_allow_html=True
-    )
-
+    # ══════════════════════════════════════
+    # BUDGET — WITH SMART ANALYSIS
+    # ══════════════════════════════════════
     st.markdown("##### 💰 BUDGET")
     b1, b2 = st.columns([1, 2])
     with b1:
@@ -422,25 +454,89 @@ with col1:
         ph, hint      = ph_map[curr_key]
         budget_amount = st.text_input("AMOUNT", placeholder=ph, help=hint)
 
+    # ══════════════════════════════════════
+    # SMART BUDGET ANALYSIS
+    # ══════════════════════════════════════
+    budget_status = "unknown"
+    budget_tier   = ""
+
     if budget_amount:
         try:
-            amt = float(budget_amount.replace(",", ""))
-            tiers = {
-                "INR":[(30000,"🟢 BUDGET"),(80000,"🟡 MODERATE"),(150000,"🟠 COMFORTABLE")],
-                "USD":[(800,"🟢 BUDGET"),(2500,"🟡 MODERATE"),(5000,"🟠 COMFORTABLE")],
-                "EUR":[(700,"🟢 BUDGET"),(2000,"🟡 MODERATE"),(4000,"🟠 COMFORTABLE")],
-                "GBP":[(600,"🟢 BUDGET"),(1800,"🟡 MODERATE"),(3500,"🟠 COMFORTABLE")],
+            amt     = float(budget_amount.replace(",", ""))
+            per_day = amt / max(duration, 1)
+
+            # Min cost per day estimates
+            min_costs = {
+                "INR": 1500,   # ₹1500/day minimum
+                "USD": 50,     # $50/day minimum
+                "EUR": 45,     # €45/day minimum
+                "GBP": 40,     # £40/day minimum
             }
-            tier = "🔴 LUXURY TRIP"
-            for limit, label in tiers[curr_key]:
-                if amt < limit:
-                    tier = f"{label} TRIP"
-                    break
-            st.markdown(
-                f"<p style='color:#38bdf8;font-weight:700;"
-                f"font-size:0.85rem;'>{tier}</p>",
-                unsafe_allow_html=True
-            )
+            comfort_costs = {
+                "INR": 4000,
+                "USD": 150,
+                "EUR": 130,
+                "GBP": 110,
+            }
+            luxury_costs = {
+                "INR": 10000,
+                "USD": 300,
+                "EUR": 250,
+                "GBP": 220,
+            }
+
+            min_c     = min_costs[curr_key]
+            comfort_c = comfort_costs[curr_key]
+            luxury_c  = luxury_costs[curr_key]
+
+            if per_day < min_c:
+                budget_status = "low"
+                budget_tier   = "BUDGET"
+                st.markdown(
+                    f'<div class="budget-warning">'
+                    f'⚠️ BUDGET MAY BE TOO LOW!<br>'
+                    f'Your daily budget: <strong>{currency} {per_day:.0f}/day</strong><br>'
+                    f'Minimum needed: <strong>{currency} {min_c}/day</strong><br>'
+                    f'💡 RECOMMENDATION: Increase to at least '
+                    f'<strong>{currency} {min_c * duration:.0f}</strong> '
+                    f'for a basic {duration}-day trip. '
+                    f'AI will still plan with your budget but options will be very limited!'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+            elif per_day < comfort_c:
+                budget_status = "ok"
+                budget_tier   = "BUDGET"
+                st.markdown(
+                    f'<div class="budget-ok">'
+                    f'✅ BUDGET LOOKS GOOD FOR A STUDENT TRIP!<br>'
+                    f'Daily budget: <strong>{currency} {per_day:.0f}/day</strong><br>'
+                    f'🎒 This covers: Budget hotels, local food, public transport & key attractions!'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+            elif per_day < luxury_c:
+                budget_status = "comfortable"
+                budget_tier   = "MODERATE"
+                st.markdown(
+                    f'<div class="budget-ok">'
+                    f'✅ COMFORTABLE BUDGET!<br>'
+                    f'Daily budget: <strong>{currency} {per_day:.0f}/day</strong><br>'
+                    f'🏨 This covers: Mid-range hotels, good restaurants & most attractions!'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+            else:
+                budget_status = "luxury"
+                budget_tier   = "LUXURY"
+                st.markdown(
+                    f'<div class="budget-ok">'
+                    f'💎 LUXURY BUDGET!<br>'
+                    f'Daily budget: <strong>{currency} {per_day:.0f}/day</strong><br>'
+                    f'🌟 This covers: Premium hotels, fine dining & exclusive experiences!'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
         except Exception:
             pass
 
@@ -449,17 +545,18 @@ with col1:
 
 with col2:
     # ══════════════════════════════════════
-    # DATE PICKER — FIXED (no format param)
+    # DATE PICKER — AUTO-FILL FIXED
     # ══════════════════════════════════════
     st.markdown(
         "<p style='color:#e0f2fe;font-weight:700;"
         "font-size:0.9rem;margin-bottom:4px;'>🗓️ TRAVEL DATES</p>",
         unsafe_allow_html=True
     )
-    today      = datetime.date.today()
-    default_s  = today + datetime.timedelta(days=7)
-    dc1, dc2   = st.columns(2)
 
+    today     = datetime.date.today()
+    default_s = today + datetime.timedelta(days=7)
+
+    dc1, dc2  = st.columns(2)
     with dc1:
         start_date = st.date_input(
             "FROM DATE ✈️",
@@ -467,11 +564,11 @@ with col2:
             min_value=today,
             key="start_date_input"
         )
-
     with dc2:
+        # ✅ AUTO-FILL: To Date = From Date + duration
         auto_end = start_date + datetime.timedelta(days=duration)
         end_date = st.date_input(
-            "TO DATE 🏁 (AUTO-FILLED)",
+            "TO DATE 🏁",
             value=auto_end,
             min_value=today,
             key="end_date_input"
@@ -494,7 +591,7 @@ with col2:
             f"{end_date.strftime('%d %b %Y')}</p>",
             unsafe_allow_html=True
         )
-        
+
     travelers = st.number_input("👥 NUMBER OF TRAVELERS", 1, 20, 2)
 
     language = st.selectbox(
@@ -532,7 +629,7 @@ with col2:
 
 special_requirements = st.text_area(
     "💬 SPECIAL REQUIREMENTS (OPTIONAL)",
-    placeholder="e.g. Vegetarian food, travelling with friends...",
+    placeholder="e.g. Vegetarian food, student trip, budget-friendly only...",
     height=80
 )
 st.markdown("---")
@@ -541,7 +638,7 @@ st.markdown("---")
 # ══════════════════════════════════════
 # PDF GENERATOR
 # ══════════════════════════════════════
-def create_pdf(content, destination, duration,
+def create_pdf(content, from_city, destination, duration,
                budget, travel_dates, travelers):
     pdf = FPDF()
     pdf.add_page()
@@ -557,19 +654,15 @@ def create_pdf(content, destination, duration,
              "ai-travel-planner-h7f7ryewjbufa5tdvfewnu.streamlit.app",
              ln=True, align="C")
     pdf.set_fill_color(224, 242, 254)
-    pdf.rect(10, 40, 190, 30, 'F')
+    pdf.rect(10, 40, 190, 35, 'F')
     pdf.set_text_color(2, 132, 199)
     pdf.set_font("Arial", "B", 11)
     pdf.set_xy(12, 42)
-    pdf.cell(
-        0, 6,
-        f"DESTINATION: {destination.upper()}  |  "
-        f"DURATION: {duration} DAYS  |  TRAVELERS: {travelers}",
-        ln=True
-    )
+    route = f"{from_city.upper()} → {destination.upper()}" if from_city else destination.upper()
+    pdf.cell(0, 6, f"ROUTE: {route}  |  DURATION: {duration} DAYS  |  TRAVELERS: {travelers}", ln=True)
     pdf.set_xy(12, 50)
     pdf.cell(0, 6, f"DATES: {travel_dates}  |  BUDGET: {budget}", ln=True)
-    pdf.set_xy(10, 75)
+    pdf.set_xy(10, 80)
     pdf.set_text_color(30, 30, 30)
     pdf.set_font("Arial", "", 10)
     clean = re.sub(r'[^\x00-\x7F]+', '', content)
@@ -598,72 +691,52 @@ def create_pdf(content, destination, duration,
     pdf.rect(0, pdf.get_y(), 210, 20, 'F')
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Arial", "B", 9)
-    pdf.cell(
-        0, 8,
-        "© MANISH TRAVEL PLANNER — ALL RIGHTS RESERVED",
-        align="C"
-    )
+    pdf.cell(0, 8, "© MANISH TRAVEL PLANNER — ALL RIGHTS RESERVED", align="C")
     return pdf.output(dest='S').encode('latin-1')
 
 
 # ══════════════════════════════════════
 # EMAIL SENDER
 # ══════════════════════════════════════
-def send_email(to_email, destination, itinerary,
+def send_email(to_email, from_city, destination, itinerary,
                duration, travel_dates, budget):
     try:
-        msg            = MIMEMultipart("alternative")
-        msg["Subject"] = (
-            f"✈️ YOUR {duration}-DAY "
-            f"{destination.upper()} TRAVEL ITINERARY"
-        )
-        msg["From"] = EMAIL_SENDER
-        msg["To"]   = to_email
+        route = f"{from_city} → {destination}" if from_city else destination
+        msg   = MIMEMultipart("alternative")
+        msg["Subject"] = f"✈️ YOUR {duration}-DAY {destination.upper()} TRAVEL ITINERARY"
+        msg["From"]    = EMAIL_SENDER
+        msg["To"]      = to_email
         html_body = f"""
-        <html><body style="font-family:Arial;background:#0c1445;
-                           color:#e0f2fe;padding:20px;">
-        <div style="max-width:700px;margin:auto;background:#1a237e;
-                    border-radius:16px;overflow:hidden;">
+        <html><body style="font-family:Arial;background:#0c1445;color:#e0f2fe;padding:20px;">
+        <div style="max-width:700px;margin:auto;background:#1a237e;border-radius:16px;overflow:hidden;">
             <div style="background:#0284c7;padding:25px;text-align:center;">
-                <h1 style="color:white;text-transform:uppercase;
-                           letter-spacing:3px;margin:0;">
+                <h1 style="color:white;text-transform:uppercase;letter-spacing:3px;margin:0;">
                     🌍 AI TRAVEL ITINERARY PLANNER
                 </h1>
-                <p style="color:#bae6fd;text-transform:uppercase;
-                          letter-spacing:2px;margin:5px 0;">
+                <p style="color:#bae6fd;text-transform:uppercase;letter-spacing:2px;margin:5px 0;">
                     BY MANISH TRAVEL PLANNER
                 </p>
             </div>
             <div style="padding:20px;background:#e0f2fe;color:#0c1445;">
-                <table style="width:100%;background:#bae6fd;
-                              border-radius:10px;padding:15px;
-                              margin-bottom:20px;">
+                <table style="width:100%;background:#bae6fd;border-radius:10px;padding:15px;margin-bottom:20px;">
                     <tr>
-                        <td><strong>📍 DESTINATION:</strong>
-                            {destination.upper()}</td>
-                        <td><strong>📅 DURATION:</strong>
-                            {duration} DAYS</td>
+                        <td><strong>✈️ ROUTE:</strong> {route.upper()}</td>
+                        <td><strong>📅 DURATION:</strong> {duration} DAYS</td>
                     </tr>
                     <tr>
-                        <td><strong>🗓️ DATES:</strong>
-                            {travel_dates}</td>
-                        <td><strong>💰 BUDGET:</strong>
-                            {budget}</td>
+                        <td><strong>🗓️ DATES:</strong> {travel_dates}</td>
+                        <td><strong>💰 BUDGET:</strong> {budget}</td>
                     </tr>
                 </table>
-                <div style="white-space:pre-wrap;font-size:14px;
-                            line-height:1.8;color:#1a237e;">
+                <div style="white-space:pre-wrap;font-size:14px;line-height:1.8;color:#1a237e;">
                     {itinerary}
                 </div>
             </div>
             <div style="background:#0284c7;padding:15px;text-align:center;">
-                <p style="color:white;font-size:12px;margin:0;
-                          text-transform:uppercase;letter-spacing:1px;">
+                <p style="color:white;font-size:12px;margin:0;text-transform:uppercase;letter-spacing:1px;">
                     © MANISH TRAVEL PLANNER — ALL RIGHTS RESERVED<br>
                     <a href="https://ai-travel-planner-h7f7ryewjbufa5tdvfewnu.streamlit.app"
-                       style="color:#bae6fd;">
-                        PLAN MORE TRIPS FOR FREE
-                    </a>
+                       style="color:#bae6fd;">PLAN MORE TRIPS FOR FREE</a>
                 </p>
             </div>
         </div>
@@ -681,14 +754,14 @@ def send_email(to_email, destination, itinerary,
 # ══════════════════════════════════════
 # ITINERARY GENERATOR
 # ══════════════════════════════════════
-def generate_itinerary(destination, duration, budget, travel_dates,
-                        travelers, interests, special_requirements,
-                        lang_name):
+def generate_itinerary(from_city, destination, duration, budget,
+                        travel_dates, travelers, interests,
+                        special_requirements, lang_name,
+                        budget_tier, budget_status):
     tavily = TavilyClient(api_key=TAVILY_API_KEY)
     try:
         res = tavily.search(
-            query=(f"best things to do hotels restaurants "
-                   f"{destination} travel guide"),
+            query=f"budget travel guide {destination} cheap hotels food transport",
             max_results=3, search_depth="basic"
         )
         web_info = "\n".join([
@@ -696,63 +769,124 @@ def generate_itinerary(destination, duration, budget, travel_dates,
             for r in res.get("results", [])
         ])
     except Exception:
-        web_info = "Amazing destination with great attractions."
+        web_info = "Popular destination."
 
     groq_client    = Groq(api_key=GROQ_API_KEY)
     interests_text = ", ".join(interests) if interests else "General Sightseeing"
     special_text   = special_requirements or "None"
     curr_symbol    = budget.split()[0]
+    route          = f"{from_city} to {destination}" if from_city else destination
+
+    # Budget instructions for AI
+    if budget_status == "low":
+        budget_instruction = f"""
+CRITICAL BUDGET ALERT:
+The traveler has a VERY LIMITED budget of {budget} for {duration} days.
+Daily budget is below minimum recommended.
+YOU MUST:
+- Only suggest FREE or very cheap attractions
+- Only suggest dormitory/hostel/budget guesthouses under {curr_symbol} 500/night
+- Only suggest street food, local dhabas, cheap eateries
+- Clearly warn at the start: "⚠️ BUDGET WARNING: YOUR BUDGET IS VERY TIGHT..."
+- Give money-saving tips throughout
+- Be honest if certain activities are not affordable
+"""
+    elif budget_tier == "BUDGET":
+        budget_instruction = f"""
+BUDGET TYPE: STUDENT/BUDGET TRAVELER
+Budget: {budget} for {duration} days.
+YOU MUST STRICTLY:
+- Only suggest budget hotels (hostels, guesthouses, budget hotels)
+- Only suggest affordable local restaurants and street food
+- Suggest free or low-cost attractions
+- Use public transport only (no private taxis unless necessary)
+- Give student discounts and money saving tips
+- NEVER suggest luxury hotels, fine dining, or expensive activities
+- All recommendations MUST fit within the total budget of {budget}
+"""
+    elif budget_tier == "MODERATE":
+        budget_instruction = f"""
+BUDGET TYPE: MODERATE/MID-RANGE
+Budget: {budget} for {duration} days.
+Suggest mid-range hotels, good restaurants, mix of paid and free attractions.
+Avoid luxury options. Focus on value for money.
+"""
+    else:
+        budget_instruction = f"""
+BUDGET TYPE: LUXURY
+Budget: {budget} for {duration} days.
+Suggest premium hotels, fine dining, exclusive experiences.
+"""
 
     prompt = f"""You are an expert AI Travel Planner with 20 years experience.
 IMPORTANT: Write the ENTIRE response in {lang_name} language only.
 
-Real-time web info about {destination}: {web_info}
+Real-time info about {destination}: {web_info}
 
-Create a detailed {duration}-day itinerary:
-- Destination: {destination}
-- Dates: {travel_dates}
-- Budget: {budget}
+{budget_instruction}
+
+Create a COMPLETE journey plan from {route}:
+- Full Route: {route}
+- Travel Dates: {travel_dates}
+- Total Budget: {budget} (STRICT — do not exceed this!)
 - Travelers: {travelers}
 - Interests: {interests_text}
 - Notes: {special_text}
 
-Show ALL prices in {curr_symbol} AND USD equivalent.
+## 🚀 JOURNEY OVERVIEW
+[Briefly describe the full journey from {from_city if from_city else "starting point"} to {destination}]
+
+## 🚌 HOW TO REACH {destination.upper()} FROM {from_city.upper() if from_city else "YOUR CITY"}
+[Give transport options: flight/train/bus with approximate costs in {curr_symbol}]
+[Include booking tips and which option suits the budget]
 
 ## 🌍 DESTINATION OVERVIEW
-[4 sentences about destination]
+[4 sentences about {destination}]
 
 ## 📅 DAY-BY-DAY ITINERARY
-### DAY 1 — [THEME]
-- **MORNING:** [activity + detail]
-- **AFTERNOON:** [activity + detail]
-- **EVENING:** [dinner + detail]
-[All {duration} days with unique themes]
+### DAY 1 — ARRIVAL & CHECK-IN
+- **MORNING:** [Travel from {from_city if from_city else "home city"} — departure details]
+- **AFTERNOON:** [Arrival, check-in at budget accommodation]
+- **EVENING:** [First evening activity + dinner]
 
-## 🏨 HOTEL RECOMMENDATIONS
-1. **[HOTEL]** — [{curr_symbol}/USD price] — [why great]
-2. **[HOTEL]** — [{curr_symbol}/USD price] — [why great]
-3. **[HOTEL]** — [{curr_symbol}/USD price] — [why great]
+[Continue Day 2 to Day {duration}, each with unique theme]
 
-## 🍽️ MUST-TRY RESTAURANTS
-1. **[NAME]** — [cuisine] — [dish] — [{curr_symbol} cost]
-2. **[NAME]** — [cuisine] — [dish] — [{curr_symbol} cost]
-3. **[NAME]** — [cuisine] — [dish] — [{curr_symbol} cost]
-4. **[NAME]** — [cuisine] — [dish] — [{curr_symbol} cost]
-5. **[NAME]** — [cuisine] — [dish] — [{curr_symbol} cost]
+### DAY {duration} — DEPARTURE
+- **MORNING:** [Check-out + last activity]
+- **AFTERNOON:** [Return journey to {from_city if from_city else "home"}]
+- **EVENING:** [Arrival back home]
 
-## 💰 BUDGET BREAKDOWN
-- **ACCOMMODATION:** [{curr_symbol}] per night
-- **FOOD:** [{curr_symbol}] per day
-- **ACTIVITIES:** [{curr_symbol}] total
-- **TRANSPORT:** [{curr_symbol}] total
-- **TOTAL: [{curr_symbol}] for {travelers} TRAVELER(S)**
+## 🏨 ACCOMMODATION RECOMMENDATIONS
+[STRICTLY match to {budget_tier} budget — {budget} total]
+1. **[NAME]** — [{curr_symbol}/night] — [budget-appropriate description]
+2. **[NAME]** — [{curr_symbol}/night] — [budget-appropriate description]
+3. **[NAME]** — [{curr_symbol}/night] — [budget-appropriate description]
 
-## 💡 TOP TRAVEL TIPS
-1. [local tip] 2. [attraction tip]
-3. [cultural tip] 4. [safety tip] 5. [money saving tip]
+## 🍽️ WHERE TO EAT (BUDGET-FRIENDLY)
+1. **[NAME]** — [cuisine] — [dish] — [cost in {curr_symbol}]
+2. **[NAME]** — [cuisine] — [dish] — [cost in {curr_symbol}]
+3. **[NAME]** — [cuisine] — [dish] — [cost in {curr_symbol}]
+4. **[NAME]** — [cuisine] — [dish] — [cost in {curr_symbol}]
+5. **[NAME]** — [cuisine] — [dish] — [cost in {curr_symbol}]
 
-## 🚗 GETTING AROUND
-[Transport options with costs in {curr_symbol}]
+## 💰 COMPLETE BUDGET BREAKDOWN
+- **TRANSPORT TO/FROM {destination.upper()}:** [{curr_symbol}]
+- **LOCAL TRANSPORT:** [{curr_symbol}] total
+- **ACCOMMODATION:** [{curr_symbol}/night × {duration} nights]
+- **FOOD:** [{curr_symbol}/day × {duration} days]
+- **ACTIVITIES/ENTRY FEES:** [{curr_symbol}] total
+- **MISCELLANEOUS:** [{curr_symbol}]
+- **TOTAL SPENT: [{curr_symbol}]**
+- **REMAINING FROM BUDGET: [{curr_symbol}]** (from total {budget})
+
+## 💡 MONEY-SAVING TIPS
+1. [tip] 2. [tip] 3. [tip] 4. [tip] 5. [tip]
+
+## 🚗 LOCAL TRANSPORT IN {destination.upper()}
+[Options with costs — prefer budget options]
+
+## 🎒 PACKING LIST
+[10 essential items for this trip]
 """
 
     resp = groq_client.chat.completions.create(
@@ -761,7 +895,8 @@ Show ALL prices in {curr_symbol} AND USD equivalent.
             {"role": "system",
              "content": (
                  f"Expert travel planner. Write entirely in {lang_name}. "
-                 "Detailed itineraries with accurate local prices."
+                 f"STRICTLY plan within the budget of {budget}. "
+                 "Never suggest options that exceed the given budget."
              )},
             {"role": "user", "content": prompt}
         ],
@@ -775,30 +910,32 @@ Show ALL prices in {curr_symbol} AND USD equivalent.
 # GENERATE BUTTON
 # ══════════════════════════════════════
 generate_btn = st.button(
-    "🚀 GENERATE MY TRAVEL ITINERARY!",
+    "🚀 GENERATE MY COMPLETE TRAVEL PLAN!",
     use_container_width=True
 )
 
 if generate_btn:
     if not destination:
-        st.error("⚠️ PLEASE ENTER A DESTINATION OR CLICK A POPULAR ONE!")
+        st.error("⚠️ PLEASE ENTER YOUR DESTINATION (GOING TO)!")
     elif end_date <= start_date:
-        st.error("⚠️ PLEASE SELECT A VALID DATE RANGE!")
+        st.error("⚠️ PLEASE SELECT VALID TRAVEL DATES!")
     elif not budget_amount:
         st.error("⚠️ PLEASE ENTER YOUR BUDGET AMOUNT!")
     else:
         with st.spinner(
-            "🔍 AI IS SEARCHING & CRAFTING YOUR PERFECT TRIP... ⏳"
+            "🔍 AI IS PLANNING YOUR COMPLETE JOURNEY... ⏳"
         ):
             try:
                 result = generate_itinerary(
-                    destination, trip_days, budget,
-                    travel_dates, travelers,
-                    interests, special_requirements, lang_name
+                    from_city, destination, trip_days,
+                    budget, travel_dates, travelers,
+                    interests, special_requirements,
+                    lang_name, budget_tier, budget_status
                 )
-                st.session_state.itinerary_result = result
-                st.session_state.itinerary_dest   = destination
-                st.session_state.itinerary_ready  = True
+                st.session_state.itinerary_result    = result
+                st.session_state.itinerary_dest      = destination
+                st.session_state.itinerary_from      = from_city
+                st.session_state.itinerary_ready     = True
             except Exception as e:
                 st.error(f"❌ ERROR: {str(e)}")
                 st.info("💡 PLEASE TRY AGAIN IN A FEW SECONDS!")
@@ -810,12 +947,11 @@ if generate_btn:
 if st.session_state.get("itinerary_ready"):
     result      = st.session_state.itinerary_result
     destination = st.session_state.itinerary_dest
+    from_city   = st.session_state.get("itinerary_from", "")
 
     st.markdown("---")
     st.markdown(
-        '<div class="success-header">'
-        '✅ YOUR PERSONALIZED ITINERARY IS READY!'
-        '</div>',
+        '<div class="success-header">✅ YOUR COMPLETE TRAVEL PLAN IS READY!</div>',
         unsafe_allow_html=True
     )
     st.markdown('<div class="result-container">', unsafe_allow_html=True)
@@ -827,16 +963,17 @@ if st.session_state.get("itinerary_ready"):
     # BOOKING LINKS
     # ══════════════════════════════════════
     st.markdown(
-        '<div class="section-title">✈️ BOOK YOUR TRIP</div>',
+        '<div class="section-title">✈️ BOOK YOUR JOURNEY</div>',
         unsafe_allow_html=True
     )
-    st.caption("CLICK ANY BUTTON TO OPEN BOOKING WEBSITE!")
-
     dest_enc = urllib.parse.quote(destination)
-    bk1, bk2, bk3, bk4, bk5 = st.columns(5)
+    from_enc = urllib.parse.quote(from_city) if from_city else ""
 
+    bk1, bk2, bk3, bk4, bk5 = st.columns(5)
     booking_links = [
         (bk1,"✈️","SKYSCANNER","FLIGHTS",
+         f"https://www.skyscanner.co.in/transport/flights/{from_enc}/{dest_enc}/"
+         if from_enc else
          f"https://www.skyscanner.co.in/transport/flights/{dest_enc}/"),
         (bk2,"🛫","MAKEMYTRIP","FLIGHTS + HOTELS",
          "https://www.makemytrip.com/flights/"),
@@ -847,15 +984,14 @@ if st.session_state.get("itinerary_ready"):
         (bk5,"🏨","BOOKING.COM","HOTELS",
          f"https://www.booking.com/searchresults.html?ss={dest_enc}"),
     ]
-
     for col, emoji, name, sub, url in booking_links:
         with col:
             col.markdown(
                 f'<a href="{url}" target="_blank" style="text-decoration:none;">'
                 f'<div class="booking-card">'
                 f'<div style="font-size:1.8rem;">{emoji}</div>'
-                f'<div style="color:#38bdf8;font-weight:800;font-size:0.8rem;'
-                f'text-transform:uppercase;margin-top:5px;">{name}</div>'
+                f'<div style="color:#38bdf8;font-weight:800;'
+                f'font-size:0.8rem;text-transform:uppercase;margin-top:5px;">{name}</div>'
                 f'<div style="color:#bae6fd;font-size:0.7rem;">{sub}</div>'
                 f'</div></a>',
                 unsafe_allow_html=True
@@ -869,15 +1005,14 @@ if st.session_state.get("itinerary_ready"):
         '<div class="section-title">🗺️ EXPLORE ON GOOGLE MAPS</div>',
         unsafe_allow_html=True
     )
-
     m1, m2, m3 = st.columns(3)
     maps_links = [
         (m1,"🏛️","TOURIST ATTRACTIONS",
          f"https://www.google.com/maps/search/{dest_enc}+tourist+attractions"),
-        (m2,"🏨","HOTELS NEARBY",
-         f"https://www.google.com/maps/search/hotels+in+{dest_enc}"),
-        (m3,"🍽️","RESTAURANTS",
-         f"https://www.google.com/maps/search/restaurants+in+{dest_enc}"),
+        (m2,"🏨","BUDGET HOTELS",
+         f"https://www.google.com/maps/search/budget+hotels+in+{dest_enc}"),
+        (m3,"🍽️","LOCAL RESTAURANTS",
+         f"https://www.google.com/maps/search/local+restaurants+in+{dest_enc}"),
     ]
     for col, emoji, label, url in maps_links:
         with col:
@@ -898,7 +1033,7 @@ if st.session_state.get("itinerary_ready"):
     # ══════════════════════════════════════
     st.markdown("---")
     st.markdown(
-        '<div class="section-title">📤 SAVE OR SHARE YOUR ITINERARY</div>',
+        '<div class="section-title">📤 SAVE OR SHARE YOUR PLAN</div>',
         unsafe_allow_html=True
     )
 
@@ -907,17 +1042,15 @@ if st.session_state.get("itinerary_ready"):
     with c1:
         try:
             pdf_b = create_pdf(
-                result, destination, trip_days,
-                budget, travel_dates, travelers
+                result, from_city, destination,
+                trip_days, budget, travel_dates, travelers
             )
+            route_name = (f"{from_city}_TO_{destination}".replace(' ','_').upper()
+                         if from_city else destination.replace(' ','_').upper())
             st.download_button(
                 label="📄 DOWNLOAD AS PDF",
                 data=pdf_b,
-                file_name=(
-                    f"MANISH_"
-                    f"{destination.replace(' ','_').upper()}"
-                    f"_ITINERARY.pdf"
-                ),
+                file_name=f"MANISH_{route_name}_TRIP.pdf",
                 mime="application/pdf",
                 use_container_width=True
             )
@@ -925,18 +1058,16 @@ if st.session_state.get("itinerary_ready"):
             st.download_button(
                 label="📥 DOWNLOAD AS TEXT",
                 data=result,
-                file_name=(
-                    f"MANISH_"
-                    f"{destination.replace(' ','_').upper()}"
-                    f"_TRIP.txt"
-                ),
+                file_name=f"MANISH_{destination.replace(' ','_').upper()}_TRIP.txt",
                 mime="text/plain",
                 use_container_width=True
             )
 
     with c2:
+        route_str = (f"{from_city.upper()} → {destination.upper()}"
+                    if from_city else destination.upper())
         share_msg = (
-            f"✈️ *{trip_days}-DAY {destination.upper()} TRIP*\n"
+            f"✈️ *{trip_days}-DAY TRIP: {route_str}*\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"📅 DATES: {travel_dates}\n"
             f"👥 TRAVELERS: {travelers}\n"
@@ -975,25 +1106,18 @@ if st.session_state.get("itinerary_ready"):
                 if not user_email or "@" not in user_email:
                     st.error("⚠️ PLEASE ENTER VALID EMAIL!")
                 elif not EMAIL_SENDER:
-                    st.warning(
-                        "⚠️ EMAIL NOT CONFIGURED!\n\n"
-                        "ADD TO STREAMLIT SECRETS:\n"
-                        "EMAIL_SENDER = 'your@gmail.com'\n"
-                        "EMAIL_PASSWORD = 'your_app_password'"
-                    )
+                    st.warning("⚠️ EMAIL NOT CONFIGURED IN SECRETS!")
                 else:
-                    with st.spinner("📧 SENDING EMAIL..."):
+                    with st.spinner("📧 SENDING..."):
                         r = send_email(
-                            user_email, destination,
-                            result, trip_days,
-                            travel_dates, budget
+                            user_email, from_city,
+                            destination, result,
+                            trip_days, travel_dates, budget
                         )
                         if r is True:
-                            st.success(
-                                f"✅ ITINERARY SENT TO {user_email}!"
-                            )
+                            st.success(f"✅ SENT TO {user_email}!")
                         else:
-                            st.error(f"❌ EMAIL FAILED: {r}")
+                            st.error(f"❌ FAILED: {r}")
 
 # ══════════════════════════════════════
 # FOOTER

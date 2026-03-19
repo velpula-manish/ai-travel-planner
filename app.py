@@ -31,7 +31,12 @@ st.set_page_config(
 st.markdown("""
 <head>
     <!-- PWA Manifest -->
-    <link rel="manifest" href="https://velpula-manish.github.io/ai-travel-planner/manifest.json">
+    <link rel="manifest" href="https://raw.githubusercontent.com/velpula-manish/ai-travel-planner/main/manifest.json">
+
+    
+    <!-- App Icon -->
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/velpula-manish/ai-travel-planner/main/icon.png">
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/velpula-manish/ai-travel-planner/main/icon.png">
 
     <!-- iOS Support -->
     <meta name="apple-mobile-web-app-capable" content="yes">

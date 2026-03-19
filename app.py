@@ -493,25 +493,213 @@ with col1:
         curr_key      = [k for k in ph_map if k in currency][0]
         ph, hint      = ph_map[curr_key]
         budget_amount = st.text_input("AMOUNT", placeholder=ph, help=hint)
-
-    # ══════════════════════════════════════
-    # SMART BUDGET ANALYSIS
+# ══════════════════════════════════════
+    # SMART BUDGET ANALYSIS — DESTINATION AWARE
     # ══════════════════════════════════════
     budget_status = "unknown"
     budget_tier   = ""
+
+    # Destination categories for realistic budget checks
+    EXPENSIVE_INTERNATIONAL = [
+        "paris", "london", "tokyo", "new york", "dubai", "rome",
+        "singapore", "sydney", "zurich", "amsterdam", "barcelona",
+        "new york", "san francisco", "los angeles", "toronto",
+        "hong kong", "seoul", "milan", "vienna", "oslo", "stockholm"
+    ]
+    MODERATE_INTERNATIONAL = [
+        "bali", "bangkok", "kuala lumpur", "istanbul", "prague",
+        "budapest", "lisbon", "athens", "cairo", "mexico city",
+        "colombo", "kathmandu", "colombo", "penang", "hanoi",
+        "ho chi minh", "phnom penh", "yangon"
+    ]
+    INDIA_DESTINATIONS = [
+        "goa", "kerala", "rajasthan", "manali", "shimla", "darjeeling",
+        "ooty", "coorg", "munnar", "jaipur", "agra", "varanasi",
+        "delhi", "mumbai", "bangalore", "chennai", "hyderabad",
+        "kolkata", "udaipur", "jodhpur", "jaisalmer", "rishikesh",
+        "haridwar", "amritsar", "mysore", "pondicherry", "andaman",
+        "lakshadweep", "sikkim", "meghalaya", "assam", "kedarnath",
+        "badrinath", "tirupati", "vrindavan", "mathura"
+    ]
+
+    dest_lower = to_city.lower() if to_city else ""
+    from_lower = from_city.lower() if from_city else ""
+
+    # Detect if international travel
+    is_international = (
+        any(d in dest_lower for d in EXPENSIVE_INTERNATIONAL + MODERATE_INTERNATIONAL)
+        or (
+            dest_lower and from_lower and
+            not any(d in from_lower for d in ["india"] + INDIA_DESTINATIONS) and
+            any(d in dest_lower for d in EXPENSIVE_INTERNATIONAL)
+        )
+    )
+    is_expensive_intl = any(d in dest_lower for d in EXPENSIVE_INTERNATIONAL)
+    is_india          = any(d in dest_lower for d in INDIA_DESTINATIONS)
 
     if budget_amount:
         try:
             amt     = float(budget_amount.replace(",", ""))
             per_day = amt / max(duration, 1)
 
-            # Min cost per day estimates
-            min_costs = {
-                "INR": 1500,   # ₹1500/day minimum
-                "USD": 50,     # $50/day minimum
-                "EUR": 45,     # €45/day minimum
-                "GBP": 40,     # £40/day minimum
-            }
+            # ── MINIMUM BUDGETS (realistic) ──
+            if curr_key == "INR":
+                if is_expensive_intl:
+                    # India to Paris/London etc — flight alone ₹35,000+
+                    min_flight    = 35000
+                    min_total     = min_flight + (duration * 8000)
+                    comfort_total = min_flight + (duration * 15000)
+                    luxury_total  = min_flight + (duration * 30000)
+                    min_per_day   = 8000
+                elif any(d in dest_lower for d in MODERATE_INTERNATIONAL):
+                    min_flight    = 15000
+                    min_total     = min_flight + (duration * 4000)
+                    comfort_total = min_flight + (duration * 8000)
+                    luxury_total  = min_flight + (duration * 20000)
+                    min_per_day   = 4000
+                else:
+                    # India domestic
+                    min_total     = duration * 1500
+                    comfort_total = duration * 4000
+                    luxury_total  = duration * 10000
+                    min_per_day   = 1500
+                    min_flight    = 0
+            elif curr_key == "USD":
+                if is_expensive_intl:
+                    min_flight    = 800
+                    min_total     = min_flight + (duration * 150)
+                    comfort_total = min_flight + (duration * 300)
+                    luxury_total  = min_flight + (duration * 500)
+                    min_per_day   = 150
+                else:
+                    min_total     = duration * 50
+                    comfort_total = duration * 150
+                    luxury_total  = duration * 300
+                    min_per_day   = 50
+                    min_flight    = 0
+            else:
+                min_total     = duration * 45
+                comfort_total = duration * 130
+                luxury_total  = duration * 250
+                min_per_day   = 45
+                min_flight    = 0
+
+            # ── SHOW BUDGET FEEDBACK ──
+            if amt < min_total * 0.5:
+                # Way too low
+                budget_status = "very_low"
+                budget_tier   = "BUDGET"
+
+                if is_expensive_intl and curr_key == "INR":
+                    st.markdown(
+                        f'<div class="budget-warning">'
+                        f'🚨 <strong>BUDGET IS TOO LOW FOR THIS DESTINATION!</strong><br><br>'
+                        f'📍 You entered: <strong>{currency} {amt:,.0f}</strong>'
+                        f' for {duration} days to <strong>{to_city.upper()}</strong><br><br>'
+                        f'❌ <strong>WHY IT\'S NOT ENOUGH:</strong><br>'
+                        f'• ✈️ Round-trip flight alone: ₹{min_flight:,}–₹{min_flight*2:,}<br>'
+                        f'• 🏨 Budget hotel per night: ₹5,000–₹8,000<br>'
+                        f'• 🍽️ Food per day: ₹2,000–₹3,000<br>'
+                        f'• 🚌 Local transport: ₹500–₹1,000/day<br><br>'
+                        f'✅ <strong>RECOMMENDED MINIMUM BUDGET:</strong>'
+                        f' <strong style="color:#4ade80">'
+                        f'₹{min_total:,.0f}</strong><br>'
+                        f'💎 <strong>COMFORTABLE BUDGET:</strong>'
+                        f' <strong style="color:#60a5fa">'
+                        f'₹{comfort_total:,.0f}</strong><br><br>'
+                        f'💡 <strong>TRAIN/BUS TO {to_city.upper()} FROM INDIA IS NOT POSSIBLE.</strong>'
+                        f' Only flight option available (₹{min_flight:,}+)<br>'
+                        f'🎒 <strong>AI WILL STILL TRY TO PLAN WITH YOUR BUDGET'
+                        f' BUT OPTIONS WILL BE VERY LIMITED!</strong>'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown(
+                        f'<div class="budget-warning">'
+                        f'🚨 <strong>BUDGET IS TOO LOW!</strong><br><br>'
+                        f'📍 You entered: <strong>{currency} {amt:,.0f}</strong>'
+                        f' for {duration} days<br>'
+                        f'💰 Your daily budget: <strong>{currency} {per_day:,.0f}/day</strong><br>'
+                        f'⚠️ Minimum needed: <strong>{currency} {min_per_day:,}/day</strong><br>'
+                        f'✅ Recommended minimum total: '
+                        f'<strong>{currency} {min_total:,.0f}</strong><br><br>'
+                        f'🎒 AI will plan with your budget but options are very limited!'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+
+            elif amt < min_total:
+                # Low but not impossible for domestic
+                budget_status = "low"
+                budget_tier   = "BUDGET"
+                if is_expensive_intl and curr_key == "INR":
+                    st.markdown(
+                        f'<div class="budget-warning">'
+                        f'⚠️ <strong>BUDGET IS TIGHT FOR {to_city.upper()}!</strong><br><br>'
+                        f'📍 Budget: <strong>{currency} {amt:,.0f}</strong>'
+                        f' | Daily: <strong>₹{per_day:,.0f}/day</strong><br>'
+                        f'✈️ Note: Flight from India to {to_city} costs'
+                        f' ₹{min_flight:,}–₹{min_flight*2:,} alone<br>'
+                        f'✅ Comfortable budget: '
+                        f'<strong>₹{comfort_total:,.0f}</strong><br>'
+                        f'💡 You may need to compromise on hotel quality and activities'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown(
+                        f'<div class="budget-warning">'
+                        f'⚠️ <strong>BUDGET IS A BIT TIGHT!</strong><br>'
+                        f'Daily: <strong>{currency} {per_day:,.0f}/day</strong>'
+                        f' | Minimum needed: {currency} {min_per_day:,}/day<br>'
+                        f'💡 Stick to budget guesthouses and street food!'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+
+            elif amt < comfort_total:
+                budget_status = "ok"
+                budget_tier   = "BUDGET"
+                st.markdown(
+                    f'<div class="budget-ok">'
+                    f'✅ <strong>BUDGET LOOKS GOOD FOR A STUDENT TRIP!</strong><br>'
+                    f'Daily budget: <strong>{currency} {per_day:,.0f}/day</strong><br>'
+                    f'🎒 Covers: Budget hotels, local food,'
+                    f' public transport & key attractions!'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+
+            elif amt < luxury_total:
+                budget_status = "comfortable"
+                budget_tier   = "MODERATE"
+                st.markdown(
+                    f'<div class="budget-ok">'
+                    f'✅ <strong>COMFORTABLE BUDGET!</strong><br>'
+                    f'Daily: <strong>{currency} {per_day:,.0f}/day</strong><br>'
+                    f'🏨 Covers: Mid-range hotels, good restaurants & attractions!'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+
+            else:
+                budget_status = "luxury"
+                budget_tier   = "LUXURY"
+                st.markdown(
+                    f'<div class="budget-ok">'
+                    f'💎 <strong>LUXURY BUDGET!</strong><br>'
+                    f'Daily: <strong>{currency} {per_day:,.0f}/day</strong><br>'
+                    f'🌟 Covers: Premium hotels, fine dining & exclusive experiences!'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+
+        except Exception:
+            pass
+
+    budget = (f"{currency} {budget_amount}"
+              if budget_amount else f"{currency} (not specified)")
             comfort_costs = {
                 "INR": 4000,
                 "USD": 150,
@@ -877,8 +1065,12 @@ Create a COMPLETE journey plan from {route}:
 [Briefly describe the full journey from {from_city if from_city else "starting point"} to {destination}]
 
 ## 🚌 HOW TO REACH {destination.upper()} FROM {from_city.upper() if from_city else "YOUR CITY"}
-[Give transport options: flight/train/bus with approximate costs in {curr_symbol}]
-[Include booking tips and which option suits the budget]
+IMPORTANT TRANSPORT RULES:
+- If destination is in another COUNTRY (Paris, London, Dubai, Tokyo etc.) — ONLY mention FLIGHTS. Never suggest train or bus across oceans/countries.
+- If destination is in same country — mention train, bus or flight options.
+- Always give REALISTIC costs in {curr_symbol}.
+- If budget is too low for flights, clearly say "YOUR BUDGET MAY NOT COVER FLIGHT COST" and suggest alternatives like choosing a closer destination.
+[Give ONLY realistic transport options with honest costs]
 
 ## 🌍 DESTINATION OVERVIEW
 [4 sentences about {destination}]

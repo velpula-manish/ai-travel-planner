@@ -25,89 +25,59 @@ st.set_page_config(
 )
 
 # ══════════════════════════════════════
-# PWA CONFIGURATION
-# Makes app installable on Android/iPhone
+# PWA CONFIGURATION — Fixed Version
 # ══════════════════════════════════════
 st.markdown("""
-<head>
-    <!-- PWA Manifest -->
     <link rel="manifest" href="https://raw.githubusercontent.com/velpula-manish/ai-travel-planner/main/manifest.json">
-
-    
-    <!-- App Icon -->
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/velpula-manish/ai-travel-planner/main/icon.png">
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/velpula-manish/ai-travel-planner/main/icon.png">
-
-    <!-- iOS Support -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Travel Planner">
-
-    <!-- Android Theme -->
     <meta name="theme-color" content="#38bdf8">
     <meta name="mobile-web-app-capable" content="yes">
-
-    <!-- App Description for SEO -->
-    <meta name="description"
-          content="AI Travel Itinerary Planner powered by Groq AI and Tavily Search">
-    <meta name="keywords"
-          content="travel planner, AI travel, itinerary, India travel, budget travel">
+    <meta name="description" content="AI Travel Itinerary Planner powered by Groq AI and Tavily Search">
+    <meta name="keywords" content="travel planner, AI travel, itinerary, India travel, budget travel">
     <meta name="author" content="Manish Travel Planner">
-
-    <!-- Open Graph for WhatsApp/Social sharing -->
-    <meta property="og:title" content="🌍 Manish AI Travel Planner">
-    <meta property="og:description"
-          content="Plan your perfect trip with AI — Budget, Hotels, Food & More!">
+    <meta property="og:title" content="Manish AI Travel Planner">
+    <meta property="og:description" content="Plan your perfect trip with AI — Budget, Hotels, Food and More!">
     <meta property="og:type" content="website">
-    <meta property="og:url"
-          content="https://ai-travel-planner-h7f7ryewjbufa5tdvfewnu.streamlit.app">
+    <meta property="og:url" content="https://ai-travel-planner-h7f7ryewjbufa5tdvfewnu.streamlit.app">
 
-    <!-- PWA Service Worker Registration -->
+    <div id="installBtn"
+         style="display:none; position:fixed; bottom:80px; right:20px;
+                z-index:9999;
+                background:linear-gradient(135deg,#0369a1,#38bdf8);
+                color:white; padding:12px 20px; border-radius:25px;
+                cursor:pointer; font-weight:800; font-size:0.9rem;
+                text-transform:uppercase;
+                box-shadow:0 4px 20px rgba(56,189,248,0.5);
+                letter-spacing:1px;"
+         onclick="installApp()">
+        📲 INSTALL APP
+    </div>
+
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js')
-                .then(function(reg) {
-                    console.log('SW registered');
-                })
-                .catch(function(err) {
-                    console.log('SW registration failed: ', err);
-                });
-            });
-        }
-
-        // Auto show install prompt
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
             document.getElementById('installBtn').style.display = 'block';
         });
-
         function installApp() {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 deferredPrompt.userChoice.then((result) => {
-                    console.log('User choice:', result);
                     deferredPrompt = null;
                 });
             }
         }
     </script>
-</head>
-
-<!-- Install App Button — shows on mobile! -->
-<div id="installBtn" style="display:none; position:fixed; bottom:80px; right:20px;
-     z-index:9999; background:linear-gradient(135deg,#0369a1,#38bdf8);
-     color:white; padding:12px 20px; border-radius:25px; cursor:pointer;
-     font-weight:800; font-size:0.9rem; text-transform:uppercase;
-     box-shadow:0 4px 20px rgba(56,189,248,0.5); letter-spacing:1px;"
-     onclick="installApp()">
-    📲 INSTALL APP
-</div>
 """, unsafe_allow_html=True)
 
-
+# ══════════════════════════════════════
+# CSS STYLING
+# ══════════════════════════════════════
 st.markdown("""
 <style>
 [data-testid="stAppViewContainer"] {
@@ -294,7 +264,6 @@ hr { border-color: rgba(56,189,248,0.3) !important; }
     font-size: 0.7rem; color: #38bdf8 !important; opacity: 0.6; margin-top: 3px; }
 </style>
 """, unsafe_allow_html=True)
-
 # ══════════════════════════════════════
 # SESSION STATE INIT
 # ══════════════════════════════════════

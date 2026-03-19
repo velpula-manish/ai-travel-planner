@@ -18,7 +18,7 @@ EMAIL_PASSWORD = st.secrets.get("EMAIL_PASSWORD", "")
 
 st.set_page_config(
     page_title="AI Travel Planner ✈️",
-    page_icon="🌍",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -222,7 +222,7 @@ hr { border-color: rgba(56,189,248,0.3) !important; }
 with st.sidebar:
     st.markdown(
         "<h2 style='color:#38bdf8;text-transform:uppercase;"
-        "letter-spacing:2px;font-size:1rem;'>🌍 MANISH TRAVEL PLANNER</h2>",
+        "letter-spacing:2px;font-size:1rem;'> MANISH TRAVEL PLANNER</h2>",
         unsafe_allow_html=True
     )
     st.markdown("---")
@@ -271,7 +271,7 @@ with st.sidebar:
 # ══════════════════════════════════════
 # HEADER
 # ══════════════════════════════════════
-st.markdown('<div class="main-title">🌍 AI TRAVEL ITINERARY PLANNER</div>',
+st.markdown('<div class="main-title"> AI TRAVEL ITINERARY PLANNER</div>',
             unsafe_allow_html=True)
 st.markdown(
     '<div class="subtitle">YOUR PERSONAL AI TRAVEL AGENT'

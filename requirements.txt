@@ -3,3 +3,5 @@ tavily-python
 streamlit
 requests
 fpdf2
+plotly
+
